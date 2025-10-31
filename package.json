@@ -1,0 +1,34 @@
+{
+    "name": "gibrun-mcp-server",
+    "version": "1.0.0",
+    "description": "MCP Server untuk backend testing dengan PostgreSQL, HTTP requests, dan Go build automation",
+    "type": "module",
+    "main": "build/index.js",
+    "bin": {
+        "gibrun-mcp-server": "./build/index.js"
+    },
+    "scripts": {
+        "build": "tsc",
+        "dev": "tsc --watch",
+        "prepare": "npm run build"
+    },
+    "keywords": [
+        "mcp",
+        "server",
+        "api-testing",
+        "postgresql",
+        "go-build"
+    ],
+    "author": "",
+    "license": "MIT",
+    "dependencies": {
+        "@modelcontextprotocol/sdk": "^1.0.4",
+        "pg": "^8.13.1",
+        "axios": "^1.7.9"
+    },
+    "devDependencies": {
+        "@types/node": "^22.10.2",
+        "@types/pg": "^8.11.10",
+        "typescript": "^5.7.2"
+    }
+}

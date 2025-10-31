@@ -1,0 +1,29 @@
+{
+    "database": {
+        "connection_string": "postgresql://username:password@localhost:5432/dbname",
+        "pool": {
+            "max": 10,
+            "idleTimeoutMillis": 30000,
+            "connectionTimeoutMillis": 10000
+        }
+    },
+    "api": {
+        "base_url": "http://localhost:8080",
+        "timeout": 30000,
+        "default_headers": {
+            "Content-Type": "application/json",
+            "User-Agent": "gibRun-MCP-Server/1.0"
+        }
+    },
+    "go": {
+        "project_path": "/path/to/your/go/project",
+        "build_flags": "-v",
+        "test_flags": "-v -race"
+    },
+    "testing": {
+        "cleanup_test_data": true,
+        "test_data_prefix": "test_",
+        "auto_retry_on_failure": true,
+        "max_retries": 3
+    }
+}

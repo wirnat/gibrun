@@ -26,7 +26,7 @@ This document provides a detailed implementation roadmap for the Project Analyze
 ### 📋 **Implementation Status Updated**
 **Phase 1-4**: ✅ **COMPLETED** - MCP structural integration
 **Phase 5**: ✅ **COMPLETED** - Full analyzer implementation with real algorithms
-**Next**: Phase 6 (Advanced features: predictive analytics, multi-language) - IDE integration completed
+**Next**: Phase 6 (Advanced features: predictive analytics, multi-language) - VS Code IDE integration completed, JetBrains cancelled
 
 ## Phase 1: Foundation & Core Engine (Weeks 1-4) ✅ **COMPLETED - STRUCTURAL ONLY**
 

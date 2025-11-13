@@ -383,10 +383,12 @@ IDE integrations bring Project Analyzer insights directly into development envir
 - [ ] **Cursor** - AI-first editor with MCP support (Future)
 - [ ] **GoLand** - Go-specific IDE (Future)
 
-#### Phase 2: Extended Support
-- [ ] **IntelliJ IDEA** - Java ecosystem
-- [ ] **PyCharm** - Python development
-- [ ] **Visual Studio** - .NET ecosystem
+#### Phase 2: Extended Support ❌ **CANCELLED**
+- [ ] **IntelliJ IDEA** - Java ecosystem (cancelled - too complex)
+- [ ] **PyCharm** - Python development (cancelled - too complex)
+- [ ] **Visual Studio** - .NET ecosystem (cancelled - too complex)
+
+**Decision**: JetBrains IDE integration cancelled due to complexity of IntelliJ Platform SDK and Kotlin development requirements. Focus shifted to VS Code extension completion and predictive analytics.
 
 ### Integration Architecture
 

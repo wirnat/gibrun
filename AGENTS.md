@@ -77,3 +77,73 @@ Work on a feature branch (`feature/<summary>` or `fix/<issue>`). Commit summarie
 
 ## Security & Configuration Tips
 Never commit real database URIs or API tokens; rely on `.env` files ignored by git and mirror the placeholders from `config.example.json`. When sharing sample configs, redact secrets but keep host/port formats intact so other agents can reproduce your setup quickly. If you add new tools that execute shell commands, validate and sanitize inputs before passing them to `exec` to avoid unsafe mutations on contributor machines.
+
+## Agent Development Guidelines
+
+### Tool & Subagent Optimization Rules
+
+#### **MANDATORY: Context Management**
+- **ALWAYS** use memory tools (`openmemory_openmemory.query/store`) before/after ANY task
+- **ALWAYS** use specialized tools over generic ones
+- **ALWAYS** batch operations to reduce context usage
+- **FORBIDDEN**: Starting tasks without context retrieval
+
+#### **MANDATORY: Task Planning & Delegation**
+- **ALWAYS** create comprehensive TODO plans for complex tasks (3+ steps)
+- **ALWAYS** delegate to appropriate subagents for implementation
+- **ALWAYS** provide clear, detailed instructions to subagents
+- **ALWAYS** include relevant documentation and codebase references
+
+#### **Task Planning Guidelines**
+1. **Analyze Requirements**: Understand scope and complexity
+2. **Create TODO Plan**: Break down into actionable, prioritized tasks
+3. **Delegate Smartly**: Choose appropriate subagent type (developer-agent, etc.)
+4. **Provide Context**: Include codebase structure, existing patterns, requirements
+5. **Monitor Progress**: Track completion and adjust plan as needed
+
+#### **Subagent Communication Standards**
+- **Clear Objectives**: State exactly what needs to be accomplished
+- **Detailed Context**: Provide codebase structure, existing implementations
+- **Reference Materials**: Include relevant docs, patterns, examples
+- **Success Criteria**: Define completion requirements and testing needs
+- **Scope Boundaries**: Clearly define what is/isn't included
+
+#### **When to Use Subagents**
+- ✅ Complex multi-step implementations (>3 steps)
+- ✅ Large feature development requiring multiple components
+- ✅ Code refactoring affecting multiple files
+- ✅ Integration testing requiring Docker/real services
+- ✅ Performance optimization across multiple modules
+
+#### **When NOT to Use Subagents**
+- ❌ Simple single-file changes
+- ❌ Basic bug fixes (<3 lines)
+- ❌ Documentation updates only
+- ❌ Configuration changes only
+- ❌ Trivial tasks with immediate solutions
+
+#### **Subagent Selection Guide**
+- **`developer-agent`**: Code implementation, refactoring, new features
+- **`project-manager-agent`**: Complex multi-step coordination
+- **`code-review-agent`**: Quality assurance, linting, standards compliance
+- **`build-agent`**: Compilation, deployment, CI/CD setup
+
+#### **Context Optimization Techniques**
+- **Batch File Operations**: Use `multi-file-reader` instead of individual reads
+- **Parallel Tool Calls**: Execute independent operations simultaneously
+- **Memory-First Approach**: Query existing knowledge before tool usage
+- **Selective Reading**: Read only relevant sections of large files
+- **Reference Linking**: Use file paths and line numbers for navigation
+
+#### **Quality Assurance for Agent Work**
+- **Pre-Delegation**: Verify subagent capabilities match task requirements
+- **Clear Acceptance Criteria**: Define success metrics upfront
+- **Progress Monitoring**: Regular check-ins for complex tasks
+- **Result Validation**: Test and verify all deliverables
+- **Documentation Updates**: Ensure all changes are properly documented
+
+---
+
+**Agent Guidelines Version**: 2.1.0
+**Last Updated**: November 2025
+**Compliance**: MANDATORY for all agent interactions

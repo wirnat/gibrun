@@ -1,0 +1,170 @@
+{
+  "name": "gibrun-project-analyzer",
+  "displayName": "GibRun Project Analyzer",
+  "description": "AI-powered project analysis and insights directly in your IDE",
+  "version": "1.0.0",
+  "engines": {
+    "vscode": "^1.74.0",
+    "node": ">=16.0.0"
+  },
+  "categories": [
+    "Other",
+    "Linters",
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "onLanguage:typescript",
+    "onLanguage:javascript",
+    "onLanguage:go",
+    "onLanguage:python",
+    "onLanguage:java",
+    "workspaceContains:package.json",
+    "workspaceContains:go.mod",
+    "workspaceContains:requirements.txt",
+    "workspaceContains:pom.xml"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "gibrun.analyzeProject",
+        "title": "Analyze Project",
+        "category": "GibRun"
+      },
+      {
+        "command": "gibrun.showHealthDashboard",
+        "title": "Show Health Dashboard",
+        "category": "GibRun"
+      },
+      {
+        "command": "gibrun.refreshAnalysis",
+        "title": "Refresh Analysis",
+        "category": "GibRun"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "gibrun.analyzeProject",
+          "when": "workspaceFolderCount != 0"
+        },
+        {
+          "command": "gibrun.showHealthDashboard",
+          "when": "gibrun.analysisAvailable"
+        },
+        {
+          "command": "gibrun.refreshAnalysis",
+          "when": "gibrun.analysisAvailable"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "gibrun.analyzeProject",
+          "when": "resourceExtname =~ /\\.(js|ts|jsx|tsx|go|py|java)$/",
+          "group": "7_modification"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "GibRun Project Analyzer",
+      "properties": {
+        "gibrun.mcpServer.host": {
+          "type": "string",
+          "default": "localhost",
+          "description": "MCP server host"
+        },
+        "gibrun.mcpServer.port": {
+          "type": "number",
+          "default": 3000,
+          "description": "MCP server port"
+        },
+        "gibrun.analysis.autoRefresh": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically refresh analysis on file changes"
+        },
+        "gibrun.analysis.debounceMs": {
+          "type": "number",
+          "default": 1000,
+          "minimum": 100,
+          "maximum": 5000,
+          "description": "Debounce time for analysis triggers (ms)"
+        },
+        "gibrun.diagnostics.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable real-time diagnostics"
+        },
+        "gibrun.diagnostics.severity.architectural": {
+          "type": "string",
+          "enum": ["error", "warning", "information", "hint"],
+          "default": "warning",
+          "description": "Severity level for architectural violations"
+        },
+        "gibrun.diagnostics.severity.quality": {
+          "type": "string",
+          "enum": ["error", "warning", "information", "hint"],
+          "default": "information",
+          "description": "Severity level for code quality issues"
+        }
+      }
+    },
+    "views": {
+      "explorer": [
+        {
+          "id": "gibrunAnalysisView",
+          "name": "Project Analysis",
+          "icon": "$(graph)",
+          "contextualTitle": "GibRun Project Analysis"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "gibrunAnalysisView",
+        "contents": "No analysis available. Run 'GibRun: Analyze Project' to get started."
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js",
+    "package": "vsce package",
+    "publish": "vsce publish"
+  },
+  "dependencies": {
+    "vscode": "^1.74.0",
+    "vscode-languageclient": "^8.1.0",
+    "vscode-languageserver": "^8.1.0",
+    "vscode-languageserver-textdocument": "^1.0.8",
+    "@modelcontextprotocol/sdk": "^0.4.0",
+    "ws": "^8.13.0",
+    "axios": "^1.4.0"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.74.0",
+    "@types/node": "16.x",
+    "@types/ws": "^8.5.5",
+    "@typescript-eslint/eslint-plugin": "^6.4.1",
+    "@typescript-eslint/parser": "^6.4.1",
+    "eslint": "^8.47.0",
+    "typescript": "^5.1.6",
+    "@vscode/test-electron": "^2.3.4",
+    "vsce": "^2.15.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/gibrun"
+  },
+  "publisher": "your-org",
+  "license": "MIT",
+  "icon": "images/icon.png",
+  "galleryBanner": {
+    "color": "#1e1e1e",
+    "theme": "dark"
+  }
+}

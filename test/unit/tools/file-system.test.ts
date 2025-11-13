@@ -46,9 +46,9 @@ describe('File System Tools', () => {
     describe('FILE_SYSTEM_TOOLS', () => {
         it('should export FILE_SYSTEM_TOOLS array with correct structure', () => {
             expect(FILE_SYSTEM_TOOLS).toBeInstanceOf(Array)
-            expect(FILE_SYSTEM_TOOLS).toHaveLength(3)
+            expect(FILE_SYSTEM_TOOLS).toHaveLength(7)
 
-            const [readTool, writeTool, execTool] = FILE_SYSTEM_TOOLS
+            const [readTool, writeTool, execTool, multiReadTool, multiEditTool, projectTool, templateTool] = FILE_SYSTEM_TOOLS
 
             // Test read_source_file tool
             expect(readTool.name).toBe('read_source_file')
@@ -64,10 +64,30 @@ describe('File System Tools', () => {
             expect(execTool.name).toBe('execute_shell_command')
             expect(execTool.description).toContain('Execute shell commands')
             expect(execTool.inputSchema.required).toEqual(['command'])
+
+            // Test multi_file_reader tool
+            expect(multiReadTool.name).toBe('multi_file_reader')
+            expect(multiReadTool.description).toContain('Read multiple files simultaneously')
+            expect(multiReadTool.inputSchema.required).toBeUndefined()
+
+            // Test multi_file_editor tool
+            expect(multiEditTool.name).toBe('multi_file_editor')
+            expect(multiEditTool.description).toContain('Perform batch editing operations')
+            expect(multiEditTool.inputSchema.required).toEqual(['operation', 'target_files'])
+
+            // Test project_file_manager tool
+            expect(projectTool.name).toBe('project_file_manager')
+            expect(projectTool.description).toContain('Advanced project file management')
+            expect(projectTool.inputSchema.required).toEqual(['operation'])
+
+            // Test file_template_manager tool
+            expect(templateTool.name).toBe('file_template_manager')
+            expect(templateTool.description).toContain('Manage and apply code templates')
+            expect(templateTool.inputSchema.required).toEqual(['operation'])
         })
 
         it('should have proper parameter schemas', () => {
-            const [readTool, writeTool, execTool] = FILE_SYSTEM_TOOLS
+            const [readTool, writeTool, execTool, multiReadTool, multiEditTool, projectTool, templateTool] = FILE_SYSTEM_TOOLS
 
             // Read tool parameters
             const readProps = readTool.inputSchema.properties as any

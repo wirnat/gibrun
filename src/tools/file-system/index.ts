@@ -4,6 +4,10 @@ import { existsSync } from "fs";
 import { exec } from "child_process";
 import { promisify } from "util";
 import { logError } from "@/services/logger-service.js";
+import { MULTI_FILE_READER_TOOLS, handleMultiFileReader } from "./multi-file-reader.js";
+import { MULTI_FILE_EDITOR_TOOLS, handleMultiFileEditor } from "./multi-file-editor.js";
+import { PROJECT_FILE_MANAGER_TOOLS, handleProjectFileManager } from "./project-manager.js";
+import { FILE_TEMPLATE_MANAGER_TOOLS, handleFileTemplateManager } from "./template-manager.js";
 
 const execAsync = promisify(exec);
 
@@ -87,6 +91,10 @@ export const FILE_SYSTEM_TOOLS: Tool[] = [
             required: ["command"]
         },
     },
+    ...MULTI_FILE_READER_TOOLS,
+    ...MULTI_FILE_EDITOR_TOOLS,
+    ...PROJECT_FILE_MANAGER_TOOLS,
+    ...FILE_TEMPLATE_MANAGER_TOOLS,
 ];
 
 export async function handleReadSourceFile(args: any) {
@@ -264,3 +272,6 @@ export async function handleExecuteShellCommand(args: any) {
         };
     }
 }
+
+// Export multi-file tools and handlers
+export { MULTI_FILE_READER_TOOLS, MULTI_FILE_EDITOR_TOOLS, PROJECT_FILE_MANAGER_TOOLS, FILE_TEMPLATE_MANAGER_TOOLS, handleMultiFileReader, handleMultiFileEditor, handleProjectFileManager, handleFileTemplateManager };

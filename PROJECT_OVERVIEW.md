@@ -31,14 +31,16 @@ Backend programmer sering menghadapi workflow testing yang repetitif:
  ┌────────────────────────┴────────────────────────────────────┐
  │                   gibRun MCP Server                         │
  │  ┌──────────────────────────────────────────────────────┐  │
- │  │                      Tools                            │  │
- │  │  • postgres_query     • http_request                 │  │
- │  │  • build_go_project   • run_go_command               │  │
- │  │  • read_source_file   • write_source_file            │  │
- │  │  • multi_file_reader • multi_file_editor             │  │
- │  │  • project_file_manager • file_template_manager      │  │
- │  │  • execute_shell_command • dap_restart               │  │
- │  │  • dap_send_command   • debugger_tools (10+)         │  │
+  │  │                      Tools                            │  │
+  │  │  • postgres_query     • http_request                 │  │
+  │  │  • build_go_project   • run_go_command               │  │
+  │  │  • read_source_file   • write_source_file            │  │
+  │  │  • multi_file_reader • multi_file_editor             │  │
+  │  │  • project_file_manager • file_template_manager      │  │
+  │  │  • execute_shell_command • dap_restart               │  │
+  │  │  • dap_send_command   • debugger_tools (10+)         │  │
+  │  │  • project_analyzer (6 tools) • architecture/quality │  │
+  │  │  • dependencies/metrics • health/insights            │  │
  │  └──────────────────────────────────────────────────────┘  │
  └───┬────────────┬────────────────┬────────────────┬─────────┘
      │            │                │                │

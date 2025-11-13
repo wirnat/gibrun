@@ -21,6 +21,7 @@ import { logError, logInfo } from "@/services/logger-service.js";
 import { DatabaseService } from "@/services/database-service.js";
 import { HttpService } from "@/services/http-service.js";
 import { FILE_SYSTEM_TOOLS, handleMultiFileReader, handleMultiFileEditor, handleProjectFileManager, handleFileTemplateManager } from "@/tools/file-system/index.js";
+import { ProjectAnalyzerTool } from "@/tools/project-analyzer/index.js";
 
 const execAsync = promisify(exec);
 const goDebuggerProxy = new GoDebuggerProxy(process.cwd());
@@ -28,6 +29,7 @@ const goDebuggerProxy = new GoDebuggerProxy(process.cwd());
 // Service instances
 const databaseService = new DatabaseService();
 const httpService = new HttpService();
+const projectAnalyzerTool = new ProjectAnalyzerTool();
 
 // PostgreSQL connection pools - LEGACY: will be removed after migration
 const dbPools = new Map<string, Pool>();
@@ -35,6 +37,7 @@ const dbPools = new Map<string, Pool>();
 // Tool definitions
 const LOCAL_TOOLS: Tool[] = [
     ...FILE_SYSTEM_TOOLS,
+    ...projectAnalyzerTool.getTools(),
     {
         name: "postgres_query",
         description:
@@ -268,6 +271,12 @@ const LOCAL_TOOL_HANDLERS: Record<string, ToolHandler> = {
     file_template_manager: handleFileTemplateManager,
     dap_restart: handleDAPRestart,
     dap_send_command: handleDAPSendCommand,
+    "project_analyzer/architecture": (args: any) => projectAnalyzerTool.executeTool("project_analyzer/architecture", args),
+    "project_analyzer/quality": (args: any) => projectAnalyzerTool.executeTool("project_analyzer/quality", args),
+    "project_analyzer/dependencies": (args: any) => projectAnalyzerTool.executeTool("project_analyzer/dependencies", args),
+    "project_analyzer/metrics": (args: any) => projectAnalyzerTool.executeTool("project_analyzer/metrics", args),
+    "project_analyzer/health": (args: any) => projectAnalyzerTool.executeTool("project_analyzer/health", args),
+    "project_analyzer/insights": (args: any) => projectAnalyzerTool.executeTool("project_analyzer/insights", args),
 };
 
 function mergeToolLists(primary: Tool[], secondary: Tool[]): Tool[] {

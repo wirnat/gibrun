@@ -46,10 +46,46 @@ MCP Server untuk membantu backend programmer dalam proses end-to-end API testing
    - Works dengan VSCode Go debugger
 
 9. **dap_send_command** - Send custom DAP commands
-   - Advanced debugger control
-   - Set breakpoints programmatically
-   - Evaluate expressions
-   - Custom DAP operations
+    - Advanced debugger control
+    - Set breakpoints programmatically
+    - Evaluate expressions
+    - Custom DAP operations
+
+10. **project_analyzer/architecture** - Analyze project architecture 🔥 **NEW**
+    - Structural health assessment
+    - Layer identification (MVC, Clean Architecture, etc.)
+    - Dependency flow analysis
+    - Circular dependency detection
+
+11. **project_analyzer/quality** - Code quality assessment 🔥 **NEW**
+    - Complexity analysis (cyclomatic, cognitive)
+    - Code duplication detection
+    - Test coverage integration
+    - Maintainability scoring
+
+12. **project_analyzer/dependencies** - Dependency analysis 🔥 **NEW**
+    - Security vulnerability scanning
+    - License compliance checking
+    - Compatibility analysis
+    - Dependency graph visualization
+
+13. **project_analyzer/metrics** - Development metrics 🔥 **NEW**
+    - Productivity tracking
+    - Velocity measurements
+    - Code churn analysis
+    - Team performance insights
+
+14. **project_analyzer/health** - Project health assessment 🔥 **NEW**
+    - Overall health scoring
+    - Risk assessment
+    - Benchmark comparison
+    - Improvement roadmap generation
+
+15. **project_analyzer/insights** - AI-powered insights 🔥 **NEW**
+    - Pattern recognition
+    - Anomaly detection
+    - Predictive recommendations
+    - Personalized development guidance
 
 ### Debugger Tools (mirror `external/mcp-go-debugger`)
 

@@ -1,0 +1,18 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/health"
+  },
+  "response": {
+    "status": 200,
+    "jsonBody": {
+      "status": "healthy",
+      "timestamp": "{{now format='yyyy-MM-dd HH:mm:ss'}}",
+      "version": "1.0.0"
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "X-API-Version": "v1"
+    }
+  }
+}

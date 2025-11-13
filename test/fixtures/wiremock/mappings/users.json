@@ -1,0 +1,27 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/users"
+  },
+  "response": {
+    "status": 200,
+    "jsonBody": {
+      "users": [
+        {
+          "id": 1,
+          "name": "Alice Johnson",
+          "email": "alice@example.com",
+          "active": true
+        },
+        {
+          "id": 2,
+          "name": "Bob Smith",
+          "email": "bob@example.com",
+          "active": true
+        }
+      ],
+      "total": 2,
+      "page": 1
+    }
+  }
+}

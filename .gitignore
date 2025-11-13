@@ -36,3 +36,6 @@ Thumbs.db
 coverage/
 .nyc_output/
 
+.opencode
+.claude
+.agent-os

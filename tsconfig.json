@@ -13,7 +13,11 @@
         "declaration": true,
         "types": [
             "node"
-        ]
+        ],
+        "baseUrl": "./src",
+        "paths": {
+            "@/*": ["*"]
+        }
     },
     "include": [
         "src/**/*"

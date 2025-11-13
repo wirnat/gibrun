@@ -1,23 +1,6 @@
 version: '3.8'
 
 services:
-  postgres:
-    image: postgres:15-alpine
-    container_name: gibrun-postgres
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: testdb
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./test-example/schema.sql:/docker-entrypoint-initdb.d/schema.sql
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   # Optional: pgAdmin for database management
   pgadmin:
@@ -33,6 +16,63 @@ services:
     profiles:
       - admin
 
+  # Test database - separate from development
+  test-postgres:
+    image: postgres:15-alpine
+    container_name: gibrun-test-postgres
+    environment:
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testpass
+      POSTGRES_DB: testdb
+    ports:
+      - "5434:5432"  # Different port to avoid conflicts
+    volumes:
+      - test_postgres_data:/var/lib/postgresql/data
+      - ./test/fixtures/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U testuser"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    profiles:
+      - test
+
+  # HTTP Mock Server for testing HTTP operations
+  http-mock:
+    image: wiremock/wiremock:latest
+    container_name: gibrun-http-mock
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./test/fixtures/wiremock:/home/wiremock
+    command: ["--global-response-templating", "--verbose"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/__admin/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    profiles:
+      - test
+
+  # DAP Mock Server for testing DAP operations
+  dap-mock:
+    build:
+      context: ./test/fixtures
+      dockerfile: Dockerfile.dap-mock
+    container_name: gibrun-dap-mock
+    ports:
+      - "49280:49280"
+    environment:
+      - DAP_PORT=49280
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "49280"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    profiles:
+      - test
+
 volumes:
   postgres_data:
+  test_postgres_data:
 

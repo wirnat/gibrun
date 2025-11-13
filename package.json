@@ -11,7 +11,12 @@
         "build": "tsc",
         "dev": "tsc --watch",
         "postbuild": "node scripts/postbuild.mjs",
-        "prepare": "npm run build"
+        "prepare": "npm run build",
+        "test": "vitest",
+        "test:ui": "vitest --ui",
+        "test:run": "vitest run",
+        "test:coverage": "vitest run --coverage",
+        "test:watch": "vitest --watch"
     },
     "keywords": [
         "mcp",
@@ -24,12 +29,16 @@
     "license": "MIT",
     "dependencies": {
         "@modelcontextprotocol/sdk": "^1.0.4",
-        "pg": "^8.13.1",
-        "axios": "^1.7.9"
+        "axios": "^1.7.9",
+        "pg": "^8.13.1"
     },
     "devDependencies": {
-        "@types/node": "^22.10.2",
+        "@types/node": "^22.19.1",
         "@types/pg": "^8.11.10",
-        "typescript": "^5.7.2"
+        "@vitest/ui": "^4.0.8",
+        "@vscode/debugprotocol": "^1.68.0",
+        "jsdom": "^27.2.0",
+        "typescript": "^5.7.2",
+        "vitest": "^4.0.8"
     }
 }

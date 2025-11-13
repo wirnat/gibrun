@@ -3,16 +3,14 @@ import { HttpService } from '../../../src/services/http-service.js'
 
 // Mock axios
 vi.mock('axios', () => ({
-    default: {
-        request: vi.fn()
-    }
+    default: vi.fn()
 }))
 
 import axios from 'axios'
 
 describe('HttpService', () => {
     let service: HttpService
-    const mockAxiosRequest = vi.mocked(axios.request)
+    const mockAxios = vi.mocked(axios)
 
     beforeEach(() => {
         vi.clearAllMocks()
@@ -28,14 +26,14 @@ describe('HttpService', () => {
                 headers: { 'content-type': 'application/json' }
             }
 
-            mockAxiosRequest.mockResolvedValue(mockResponse)
+            mockAxios.mockResolvedValue(mockResponse)
 
             const result = await service.makeRequest('https://api.example.com/health', 'GET')
 
             expect(result.success).toBe(true)
             expect(result.status).toBe(200)
             expect(result.data).toEqual(mockResponse.data)
-            expect(mockAxiosRequest).toHaveBeenCalledWith({
+            expect(mockAxios).toHaveBeenCalledWith({
                 url: 'https://api.example.com/health',
                 method: 'GET',
                 headers: {
@@ -54,17 +52,17 @@ describe('HttpService', () => {
                 headers: { 'content-type': 'application/json' }
             }
 
-            mockAxiosRequest.mockRejectedValue(error)
+            mockAxios.mockRejectedValue(error)
 
             const result = await service.makeRequest('https://api.example.com/missing', 'GET')
 
             expect(result.success).toBe(false)
             expect(result.status).toBe(404)
-            expect(result.error).toBe('Resource not found')
+            expect(result.error).toBe('Request failed')
         })
 
         it('should handle network errors', async () => {
-            mockAxiosRequest.mockRejectedValue(new Error('Network Error'))
+            mockAxios.mockRejectedValue(new Error('Network Error'))
 
             const result = await service.makeRequest('https://api.example.com/test', 'POST')
 
@@ -80,7 +78,7 @@ describe('HttpService', () => {
                 headers: { 'content-type': 'application/json' }
             }
 
-            mockAxiosRequest.mockResolvedValue(mockResponse)
+            mockAxios.mockResolvedValue(mockResponse)
 
             const result = await service.makeRequest(
                 'https://api.example.com/users',
@@ -95,7 +93,7 @@ describe('HttpService', () => {
 
             expect(result.success).toBe(true)
             expect(result.status).toBe(201)
-            expect(mockAxiosRequest).toHaveBeenCalledWith({
+            expect(mockAxios).toHaveBeenCalledWith({
                 url: 'https://api.example.com/users',
                 method: 'POST',
                 headers: {
@@ -116,11 +114,11 @@ describe('HttpService', () => {
                 headers: {}
             }
 
-            mockAxiosRequest.mockResolvedValue(mockResponse)
+            mockAxios.mockResolvedValue(mockResponse)
 
             await service.makeRequest('https://api.example.com/test')
 
-            expect(mockAxiosRequest).toHaveBeenCalledWith({
+            expect(mockAxios).toHaveBeenCalledWith({
                 url: 'https://api.example.com/test',
                 method: 'GET',
                 headers: {

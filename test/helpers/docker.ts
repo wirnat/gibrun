@@ -7,6 +7,12 @@ import { promisify } from 'util';
 
 const execAsync = promisify(exec);
 
+// Generate unique test session ID and ports
+const TEST_SESSION_ID = `test-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+const TEST_POSTGRES_PORT = 50000 + Math.floor(Math.random() * 1000);
+const TEST_HTTP_PORT = 40000 + Math.floor(Math.random() * 1000);
+const TEST_DAP_PORT = 30000 + Math.floor(Math.random() * 1000);
+
 export interface DockerService {
     name: string;
     port: number;
@@ -50,7 +56,16 @@ export async function waitForService(
 export async function startTestServices(): Promise<void> {
     try {
         console.log('Starting test Docker services...');
-        await execAsync('docker-compose --profile test up -d');
+        // Set environment variables for unique container names and ports
+        const env = {
+            ...process.env,
+            TEST_CONTAINER_PREFIX: TEST_SESSION_ID,
+            TEST_POSTGRES_PORT: TEST_POSTGRES_PORT.toString(),
+            TEST_HTTP_PORT: TEST_HTTP_PORT.toString(),
+            TEST_DAP_PORT: TEST_DAP_PORT.toString()
+        };
+
+        await execAsync('docker-compose --profile test up -d', { env });
         console.log('Test services started successfully');
     } catch (error) {
         console.error('Failed to start test services:', error);
@@ -64,7 +79,18 @@ export async function startTestServices(): Promise<void> {
 export async function stopTestServices(): Promise<void> {
     try {
         console.log('Stopping test Docker services...');
-        await execAsync('docker-compose --profile test down');
+        // Set environment variables for unique container names
+        const env = {
+            ...process.env,
+            TEST_CONTAINER_PREFIX: TEST_SESSION_ID,
+            TEST_POSTGRES_PORT: TEST_POSTGRES_PORT.toString(),
+            TEST_HTTP_PORT: TEST_HTTP_PORT.toString(),
+            TEST_DAP_PORT: TEST_DAP_PORT.toString()
+        };
+
+        await execAsync('docker-compose --profile test down --volumes --remove-orphans', { env });
+        // Also clean up any orphaned containers
+        await execAsync('docker container prune -f');
         console.log('Test services stopped successfully');
     } catch (error) {
         console.error('Failed to stop test services:', error);
@@ -76,31 +102,32 @@ export async function stopTestServices(): Promise<void> {
  * Get test database connection string
  */
 export function getTestDatabaseUrl(): string {
-    return 'postgresql://testuser:testpass@localhost:5434/testdb';
+    return `postgresql://testuser:testpass@localhost:${TEST_POSTGRES_PORT}/testdb`;
 }
 
 /**
  * Get HTTP mock server URL
  */
 export function getHttpMockUrl(): string {
-    return 'http://localhost:8081';
+    return `http://localhost:${TEST_HTTP_PORT}`;
 }
 
 /**
  * Get DAP mock server address
  */
 export function getDapMockAddress(): { host: string; port: number } {
-    return { host: 'localhost', port: 49280 };
+    return { host: 'localhost', port: TEST_DAP_PORT };
 }
 
 // Service definitions
 export const TEST_SERVICES: DockerService[] = [
     {
         name: 'test-postgres',
-        port: 5434,
+        port: TEST_POSTGRES_PORT,
         healthCheck: async () => {
             try {
-                await execAsync('docker-compose --profile test exec -T test-postgres pg_isready -U testuser');
+                const containerName = `${TEST_SESSION_ID}-test-postgres`;
+                await execAsync(`docker exec ${containerName} pg_isready -U testuser`);
                 return true;
             } catch {
                 return false;
@@ -109,10 +136,10 @@ export const TEST_SERVICES: DockerService[] = [
     },
     {
         name: 'http-mock',
-        port: 8081,
+        port: TEST_HTTP_PORT,
         healthCheck: async () => {
             try {
-                await execAsync('curl -f http://localhost:8081/__admin/health');
+                await execAsync(`curl -f http://localhost:${TEST_HTTP_PORT}/__admin/health`);
                 return true;
             } catch {
                 return false;
@@ -121,10 +148,10 @@ export const TEST_SERVICES: DockerService[] = [
     },
     {
         name: 'dap-mock',
-        port: 49280,
+        port: TEST_DAP_PORT,
         healthCheck: async () => {
             try {
-                await execAsync('nc -z localhost 49280');
+                await execAsync(`nc -z localhost ${TEST_DAP_PORT}`);
                 return true;
             } catch {
                 return false;

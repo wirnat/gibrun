@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { DatabaseService } from '../../../src/services/database-service.js'
-import { Pool } from 'pg'
 
 // Mock pg module
 vi.mock('pg', () => ({
     Pool: vi.fn()
 }))
+
+import { Pool } from 'pg'
 
 describe('DatabaseService', () => {
     let service: DatabaseService
@@ -14,15 +15,15 @@ describe('DatabaseService', () => {
     beforeEach(() => {
         vi.clearAllMocks()
 
+        // Create mock pool
         mockPool = {
             query: vi.fn(),
             connect: vi.fn(),
             end: vi.fn()
         }
 
-        // Mock the Pool constructor to return our mock pool
-        const MockPool = vi.mocked(Pool)
-        MockPool.mockImplementation(() => mockPool as any)
+        // Spy on Pool constructor and make it return mockPool
+        vi.mocked(Pool).mockImplementation(() => mockPool as any)
 
         service = new DatabaseService()
     })

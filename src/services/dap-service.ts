@@ -78,26 +78,42 @@ export class DAPService {
     private async readMessage(socket: net.Socket): Promise<DAPMessage> {
         return new Promise((resolve, reject) => {
             let buffer = '';
+            const timeout = setTimeout(() => {
+                socket.removeListener('data', onData);
+                reject(new Error('DAP response timeout'));
+            }, 30000); // 30 second timeout
 
             const onData = (data: Buffer) => {
                 buffer += data.toString();
 
                 const messages = buffer.split('\r\n');
-                if (messages.length > 1) {
-                    try {
-                        const message = JSON.parse(messages[0]);
-                        socket.removeListener('data', onData);
+                for (let i = 0; i < messages.length - 1; i++) {
+                    const messageStr = messages[i];
+                    if (messageStr.trim()) {
+                        try {
+                            const message = JSON.parse(messageStr);
 
-                        // Handle events
-                        if (message.type === 'event') {
-                            this.handleEvent(message as DAPEvent);
+                            // Handle events
+                            if (message.type === 'event') {
+                                this.handleEvent(message as DAPEvent);
+                            } else if (message.type === 'response') {
+                                // Found response, clean up and resolve
+                                clearTimeout(timeout);
+                                socket.removeListener('data', onData);
+                                resolve(message);
+                                return;
+                            }
+                        } catch (error) {
+                            clearTimeout(timeout);
+                            socket.removeListener('data', onData);
+                            reject(error);
+                            return;
                         }
-
-                        resolve(message);
-                    } catch (error) {
-                        reject(error);
                     }
                 }
+
+                // Keep remaining incomplete message in buffer
+                buffer = messages[messages.length - 1];
             };
 
             socket.on('data', onData);

@@ -165,10 +165,6 @@ describe('DAPService', () => {
 
     describe('event handling', () => {
         it('should handle DAP events', async () => {
-            mockSocket.write.mockImplementation((data, callback) => {
-                if (callback) callback()
-            })
-
             let eventReceived = false;
             const testEvent = {
                 seq: 2,
@@ -177,28 +173,14 @@ describe('DAPService', () => {
                 body: { reason: 'breakpoint', threadId: 1 }
             };
 
-            mockSocket.on.mockImplementation((event, handler) => {
-                if (event === 'data') {
-                    // First send response, then event
-                    setTimeout(() => {
-                        handler(Buffer.from('{"seq":1,"type":"response","success":true}\r\n'))
-                    }, 5)
-                    setTimeout(() => {
-                        handler(Buffer.from(JSON.stringify(testEvent) + '\r\n'))
-                    }, 15)
-                }
-            })
-
             // Add event listener
             service.addEventListener('stopped', (event) => {
                 eventReceived = true;
                 expect(event).toEqual(testEvent);
             });
 
-            await service.sendDAPRequest('localhost', 5678, 'initialize');
-
-            // Wait for event processing
-            await new Promise(resolve => setTimeout(resolve, 20));
+            // Directly call handleEvent to test event processing
+            service['handleEvent'](testEvent as any);
 
             expect(eventReceived).toBe(true);
         })

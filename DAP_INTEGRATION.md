@@ -64,11 +64,22 @@ Create or edit `.vscode/launch.json`:
 2. Press `F5` to start debugging
 3. Check **Debug Console** (Ctrl+Shift+Y)
 4. Look for line: `DAP server listening at: 127.0.0.1:XXXXX`
-5. Note the port number (e.g., 49279)
+5. Note the port number (e.g., 49279) jika ingin override manual — gibRun juga bisa mendeteksi otomatis selama hanya ada satu proses `dlv dap` yang LISTEN.
 
 ### Step 3: Use gibRun with DAP Port
 
-Now you can use AI to control debugger:
+Now you can use AI to control debugger. Jika kamu tidak mengisi `port`, gibRun akan memindai host/port dengan perintah:
+
+```
+lsof -i -P -n | grep "dlv.*LISTEN" | while read line; do 
+  pid=$(echo "$line" | awk '{print $2}')
+  if ps -p $pid -o command= 2>/dev/null | grep -q "dlv dap"; then
+    echo "$line" | awk '{print "Port:", $9, "PID:", $2}'
+  fi
+done
+```
+
+Kalau ada lebih dari satu proses ditemukan, server akan menampilkan daftar tersebut dan meminta kamu memilih dengan mengisi `port` secara eksplisit.
 
 ```
 Prompt: "Test API endpoint, jika ada error fix dan restart debugger di port 49279"
@@ -90,8 +101,8 @@ Restart debugger session with optional rebuild.
 **Parameters:**
 ```typescript
 {
-  port: number,           // Required: DAP port from debug console
-  host?: string,          // Optional: default "127.0.0.1"
+  port?: number,          // Optional: auto-detect via lsof jika tidak diisi
+  host?: string,          // Optional: default "127.0.0.1" / tergantung hasil deteksi
   rebuild_first?: boolean, // Optional: default true
   project_path?: string   // Required if rebuild_first=true
 }
@@ -120,9 +131,9 @@ Send custom DAP commands for advanced control.
 **Parameters:**
 ```typescript
 {
-  port: number,        // Required: DAP port
+  port?: number,       // Optional: auto-detect via lsof jika tidak diisi
   command: string,     // Required: DAP command name
-  host?: string,       // Optional: default "127.0.0.1"
+  host?: string,       // Optional: default "127.0.0.1" / tergantung hasil deteksi
   arguments?: object   // Optional: command arguments
 }
 ```
@@ -544,4 +555,3 @@ Questions about DAP integration?
 **Happy Debugging! 🐛🔍**
 
 With gibRun DAP integration, debugging becomes a seamless, automated experience.
-

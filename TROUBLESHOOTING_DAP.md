@@ -53,6 +53,100 @@ sendDAPRequest(host, port, "disconnect", {
 
 ---
 
+## Common Issue: "DAP initialize timeout" / Session never becomes ready
+
+### Symptom
+```json
+{
+  "success": false,
+  "stage": "dap",
+  "error": "Debugger tidak pernah mengirim event 'initialized'. Jalankan ulang sesi VSCode lalu coba lagi.",
+  "dap_server": "127.0.0.1:64469"
+}
+```
+or
+```json
+{
+  "success": false,
+  "stage": "dap",
+  "error": "DAP initialize timeout - debugger tidak merespons. Pastikan sesi VSCode masih berjalan."
+}
+```
+
+### Root Cause
+- VSCode debugger berhenti / ditutup sehingga port DAP masih LISTEN tetapi tidak ada sesi aktif
+- VSCode belum pernah menjalankan `initialize → initialized → configurationDone`, sehingga perintah seperti `restart`/`evaluate` tidak akan dijawab
+- Port berubah setelah restart manual, tetapi gibRun masih mencoba port lama
+
+### Fix Steps
+1. **Buka VSCode ➜ Debug Console**, pastikan ada log terbaru `DAP server listening at: 127.0.0.1:PORT`.
+2. Jika log lama / tidak ada:
+   - Tekan `Shift+F5` untuk menghentikan debugger
+   - Tekan `F5` untuk menjalankan lagi sampai pesan listening muncul
+3. Jalankan kembali perintah MCP (`dap_restart`/`dap_send_command`). gibRun akan otomatis mengirim `initialize → configurationDone` sebelum command utama; tanpa sesi aktif, kamu tetap akan mendapat timeout.
+4. Masih error? Jalankan `dap_send_command` sederhana untuk memastikan koneksi:
+   ```json
+   {
+     "name": "dap_send_command",
+     "arguments": {
+       "command": "evaluate",
+       "arguments": {
+         "expression": "1+1",
+         "context": "repl"
+       }
+     }
+   }
+   ```
+   - ✅ Jika mendapat hasil evaluasi, koneksi siap
+   - ❌ Jika tetap timeout, ulangi langkah 1-2
+
+### Quick Checklist
+- [ ] VSCode status bar hijau (debugger aktif)
+- [ ] Debug Console menunjukkan port terbaru
+- [ ] Tidak ada firewall / VPN yang memblokir koneksi lokal
+- [ ] `dap_restart` dijalankan setelah VSCode finish loading (tunggu ±2 detik setelah F5)
+
+---
+
+## Common Issue: `go build` → `no Go files in ...`
+
+### Symptom
+```json
+{
+  "success": false,
+  "stage": "build",
+  "error": "Command failed: go build",
+  "build_stderr": "no Go files in /Users/iturban/Development/Hairkatz/go-hairkatz",
+  "hints": [
+    "go build tidak menemukan file Go di \"/Users/.../go-hairkatz\". Isi 'project_path' dengan folder yang berisi file Go (contoh: direktori dengan main.go).",
+    "Folder \"cmd\" terdeteksi. Jika aplikasimu berada di dalamnya, arahkan 'project_path' ke subfolder yang sesuai, misalnya: /Users/.../go-hairkatz/cmd/<service>."
+  ]
+}
+```
+
+### Root Cause
+- `project_path` diarahkan ke root module (`go.mod`) yang tidak memiliki file Go (`main`) langsung
+- Aplikasi berada di `cmd/<service>` atau submodule lain
+- Ada kesalahan penamaan folder ketika mengisi prompt (typo, huruf kapital, dsb)
+
+### Fix Steps
+1. Jalankan perintah berikut di terminal untuk melihat folder yang punya `main.go`:
+   ```bash
+   find /path/to/project -maxdepth 3 -name main.go
+   ```
+2. Pilih folder yang berisi file Go yang ingin dibuild (sering kali `cmd/api`, `cmd/server`, dsb).
+3. Set `project_path` ke folder tersebut:
+   ```
+   "project_path": "/Users/.../go-hairkatz/cmd/api"
+   ```
+4. Ulangi `dap_restart` / `build_go_project`. Response baru akan menyertakan `stage: "build"` jika masih gagal sehingga kamu tahu masalahnya terjadi sebelum menyentuh DAP.
+
+### Tips
+- `go build ./cmd/api` berjalan sukses? Gunakan folder `cmd/api` sebagai `project_path`.
+- Jika struktur non-standar, tambahkan catatan di README supaya agen lain tahu path yang benar.
+
+---
+
 ## Testing the Fix
 
 ### Step 1: Verify Build
@@ -79,6 +173,19 @@ npm run build
    ```
    DAP server listening at: 127.0.0.1:49279
    ```
+
+> **Auto-detect info:** Jika kamu tidak menentukan `port`, gibRun akan menjalankan perintah berikut untuk mencari proses `dlv dap` yang sedang LISTEN dan memverifikasi bahwa proses tersebut dijalankan dengan `dlv dap`:
+> ```
+> lsof -i -P -n | grep "dlv.*LISTEN" | while read line; do 
+>   pid=$(echo "$line" | awk '{print $2}')
+>   if ps -p $pid -o command= 2>/dev/null | grep -q "dlv dap"; then
+>     echo "$line" | awk '{print "Port:", $9, "PID:", $2}'
+>   fi
+> done
+> ```
+> - ✅ Jika hanya ada satu proses, host/port itu dipakai otomatis
+> - ⚠️ Jika lebih dari satu proses ditemukan, kamu akan diminta memilih salah satunya dengan mengisi `port` (atau hentikan proses yang tidak terpakai)
+> - ⏳ Jika tidak ada proses, jalankan debugger VSCode (F5) terlebih dahulu
 
 #### Test Commands:
 
@@ -152,7 +259,18 @@ await sendDAPRequest(host, port, "disconnect", {
 });
 ```
 
-#### 3. Fallback Strategy
+#### 3. Automatic Session Initialization
+
+gibRun kini menjalankan urutan DAP standar sebelum mengirim perintah utama:
+
+1. `initialize`
+2. menunggu event `initialized`
+3. mengirim `configurationDone`
+4. baru menjalankan perintah yang diminta (`disconnect`, `restart`, `evaluate`, dll)
+
+Jika debugger tidak pernah mengirim event `initialized`, gibRun akan menghentikan koneksi dan menampilkan error khusus sehingga kamu tahu bahwa sesi VSCode belum siap. Lihat bagian *Common Issue: "DAP initialize timeout"* untuk langkah perbaikannya.
+
+#### 4. Fallback Strategy
 
 ```typescript
 try {
@@ -184,7 +302,7 @@ After update, verify:
 - [ ] Build succeeds: `npm run build`
 - [ ] Claude Desktop restarted
 - [ ] VSCode debugger running
-- [ ] DAP port visible in Debug Console
+- [ ] DAP port visible in Debug Console (atau auto-detect menemukan proses `dlv dap`)
 - [ ] Test restart: `"Restart debugger port XXXXX"`
 - [ ] Success response received
 - [ ] VSCode debugger actually restarted
@@ -464,5 +582,3 @@ When working correctly:
 - Check DAP_INTEGRATION.md untuk detailed guide
 - Check README.md untuk API reference
 - GitHub Issues untuk bug reports
-
-

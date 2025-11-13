@@ -51,13 +51,33 @@ MCP Server untuk membantu backend programmer dalam proses end-to-end API testing
    - Evaluate expressions
    - Custom DAP operations
 
+### Debugger Tools (mirror `external/mcp-go-debugger`)
+
+gibRun sekarang otomatis menjalankan proxy MCP untuk `external/mcp-go-debugger`, sehingga semua tool debugger Delve tersedia langsung di server ini:
+
+- **launch** – Jalankan binary Go dengan Delve dan mulai sesi debugging baru.
+- **attach** – Attach ke proses Go yang sudah berjalan berdasarkan PID.
+- **debug** – Compile & debug file Go tertentu (mirip `dlv debug path/to/file.go`).
+- **debug_test** – Build serta debug fungsi test tertentu dengan flag tambahan.
+- **set_breakpoint** – Pasang breakpoint pada file + nomor baris.
+- **list_breakpoints** – Lihat semua breakpoint yang aktif beserta statusnya.
+- **remove_breakpoint** – Hapus breakpoint berdasarkan ID Delve.
+- **continue** – Lanjutkan eksekusi sampai breakpoint berikutnya atau proses berakhir.
+- **step** – Step into baris atau fungsi berikutnya.
+- **step_over** – Step over ke baris berikut tanpa masuk ke fungsi.
+- **step_out** – Step keluar dari fungsi saat ini.
+- **eval_variable** – Evaluasi ekspresi/variable dengan kedalaman custom.
+- **get_debugger_output** – Ambil STDOUT/STDERR yang ditangkap oleh Delve beserta konteks eksekusi.
+- **close** – Tutup sesi debugging aktif dan hentikan server Delve internal.
+
 ## Instalasi
 
 ### Prerequisites
 
 - Node.js 18+ 
 - PostgreSQL (untuk database testing)
-- Go (untuk build automation)
+- Go 1.20+ (untuk build automation **dan** agar proxy debugger bisa menjalankan Delve)
+- Delve (`dlv`) + dependencies dari [`external/mcp-go-debugger`](external/mcp-go-debugger)
 
 ### Install Dependencies
 
@@ -121,6 +141,59 @@ Jika menggunakan Cursor, tambahkan di `.cursor/mcp_config.json`:
   }
 }
 ```
+
+### Environment Variables untuk PostgreSQL
+
+Anda dapat menyimpan kredensial database langsung di konfigurasi agen MCP sehingga tidak perlu mengetik `connection_string` setiap kali memanggil `postgres_query`. Server akan mencoba urutan berikut:
+
+1. Nilai argumen `connection_string` (jika tetap diberikan).
+2. Environment variable `POSTGRES_CONNECTION_STRING`.
+3. Kombinasi `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_HOST` (default `localhost`), `POSTGRES_PORT` (default `5432`), dan `POSTGRES_DB`.
+
+Contoh konfigurasi Claude/Cursor:
+
+```json
+"environment": {
+  "POSTGRES_USER": "postgres",
+  "POSTGRES_PASSWORD": "postgres",
+  "POSTGRES_HOST": "localhost",
+  "POSTGRES_PORT": "5432",
+  "POSTGRES_DB": "hairkatz_0_0_1"
+}
+```
+
+Setelah environment di-set, cukup kirim query:
+
+```
+Tool: postgres_query
+Args:
+  query: "SELECT * FROM users LIMIT 5"
+```
+
+Jika butuh database lain, override dengan `connection_string` langsung pada tool call.
+
+### Konfigurasi Go Debugger Proxy
+
+Debugger tools di atas dijalankan oleh proses `mcp-go-debugger` yang dipanggil otomatis:
+
+1. gibRun mencoba menjalankan binary `mcp-go-debugger` yang tersedia di `$PATH`.
+2. Jika tidak ditemukan, server fallback ke `go run ./cmd/mcp-go-debugger` di folder `external/mcp-go-debugger` (pastikan Anda sudah menjalankan `go mod download` di sana minimal sekali).
+
+Anda dapat mengoverride perilaku tersebut via environment variable pada konfigurasi MCP client:
+
+```json
+"environment": {
+  "GIBRUN_GO_DEBUGGER_COMMAND": "/abs/path/to/mcp-go-debugger",
+  "GIBRUN_GO_DEBUGGER_ARGS": "--log --log-output=rpc",
+  "GIBRUN_GO_DEBUGGER_CWD": "/Users/you/Development/mcp/gibrun/external/mcp-go-debugger"
+}
+```
+
+- `GIBRUN_GO_DEBUGGER_COMMAND` — Path ke executable alternatif (misalnya hasil `go install`).
+- `GIBRUN_GO_DEBUGGER_ARGS` — Argumen tambahan yang akan diparsing dengan pemisah spasi sederhana.
+- `GIBRUN_GO_DEBUGGER_CWD` — Working directory paksa untuk proses debugger.
+
+Jika proxy gagal start (misalnya Go belum terinstall), gibRun akan tetap berjalan tetapi hanya menampilkan tools lokal.
 
 ## Contoh Penggunaan
 
@@ -336,8 +409,8 @@ Execute shell command.
 Restart VSCode debugger session via Debug Adapter Protocol.
 
 **Parameters:**
-- `port` (required): DAP server port (lihat di VSCode debug console: "DAP server listening at: 127.0.0.1:PORT")
-- `host` (optional): DAP server host (default: "127.0.0.1")
+- `port` (optional): DAP server port (lihat di VSCode debug console: "DAP server listening at: 127.0.0.1:PORT"). Jika dikosongkan, gibRun akan mencari port otomatis memakai `lsof -i -P -n | grep "dlv.*LISTEN"` dan memverifikasi proses `dlv dap`.
+- `host` (optional): DAP server host (default: "127.0.0.1"). Ikut terdeteksi otomatis jika `port` dikosongkan.
 - `rebuild_first` (optional): Rebuild project before restart (default: true)
 - `project_path` (required if rebuild_first=true): Path to Go project
 
@@ -365,20 +438,27 @@ AI akan:
    (automatically rebuilds dan restarts debugger)
 ```
 
-**How to Get DAP Port:**
-1. Run your Go app in VSCode debugger (F5)
-2. Check Debug Console
-3. Look for: "DAP server listening at: 127.0.0.1:XXXXX"
-4. Use that port number
+**Auto-detecting DAP Address:**
+- Tidak perlu mengisi `port` jika hanya ada satu proses `dlv dap` yang LISTEN — gibRun akan menjalankan perintah berikut dan memakai host/port yang ditemukan:
+  ```
+  lsof -i -P -n | grep "dlv.*LISTEN" | while read line; do 
+    pid=$(echo "$line" | awk '{print $2}')
+    if ps -p $pid -o command= 2>/dev/null | grep -q "dlv dap"; then
+      echo "$line" | awk '{print "Port:", $9, "PID:", $2}'
+    fi
+  done
+  ```
+- Jika lebih dari satu proses ditemukan, gibRun akan menampilkan daftar port tersebut dan meminta kamu memilih dengan mengisi `port` (dan opsional `host`).
+- Manual fallback: jalankan debugger VSCode (F5), buka Debug Console, lalu cari pesan `DAP server listening at: 127.0.0.1:XXXXX` dan masukkan port tersebut.
 
 ### dap_send_command
 
 Send custom DAP command for advanced debugger control.
 
 **Parameters:**
-- `port` (required): DAP server port
+- `port` (optional): DAP server port. Kosongkan untuk auto-detect seperti di atas.
 - `command` (required): DAP command name (e.g., "restart", "disconnect", "evaluate")
-- `host` (optional): DAP server host (default: "127.0.0.1")
+- `host` (optional): DAP server host (default: "127.0.0.1"). Ikut terdeteksi otomatis jika `port` tidak diisi.
 - `arguments` (optional): Command arguments as object
 
 **Returns:**
@@ -453,4 +533,3 @@ MIT
 ## Contributing
 
 Contributions welcome! Please submit issues atau pull requests.
-

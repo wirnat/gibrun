@@ -10,6 +10,7 @@
     "scripts": {
         "build": "tsc",
         "dev": "tsc --watch",
+        "postbuild": "node scripts/postbuild.mjs",
         "prepare": "npm run build"
     },
     "keywords": [

@@ -46,13 +46,20 @@ Backend programmer sering menghadapi workflow testing yang repetitif:
 └────────┘  └─────────┘  └──────────────┘  └──────────┘
 ```
 
+Mulai versi ini, arsitektur juga menyertakan **Go Debugger Proxy** yang menjalankan `external/mcp-go-debugger` di dalam proses terpisah melalui transport STDIO MCP client. Semua tool debugger Delve dari proyek tersebut diteruskan secara transparan ke AI assistant, sehingga gibRun dapat melakukan **launch/attach**, mengatur breakpoint, dan menganalisis variabel langsung dari workspace yang sama tanpa menjalankan dua MCP server terpisah.
+
 ## 📁 Project Structure
 
 ```
 gibRun/
 │
 ├── src/
+│   ├── goDebuggerProxy.ts    # Wrapper untuk proxied mcp-go-debugger tools
+│   ├── logger.ts             # Structured logging utilities
 │   └── index.ts              # Main MCP server implementation
+│
+├── external/
+│   └── mcp-go-debugger/      # Upstream Go debugger yang diproxy oleh gibRun
 │
 ├── build/                    # Compiled JavaScript
 │   ├── index.js
@@ -217,6 +224,30 @@ Send custom DAP commands for advanced control:
   arguments: { expression: "userID" }
 }
 ```
+
+### 10. **Debugger Toolset (proxied from `external/mcp-go-debugger`)**
+
+gibRun kini menjalankan instance `mcp-go-debugger` di belakang layar dan mengekspos seluruh tool-nya:
+
+- `launch` – jalankan binary Go dengan Delve.
+- `attach` – attach ke proses berdasarkan PID.
+- `debug` – compile & debug 1 file Go.
+- `debug_test` – fokus pada satu fungsi test (dengan test flags).
+- `set_breakpoint` / `list_breakpoints` / `remove_breakpoint`.
+- `continue`, `step`, `step_over`, `step_out`.
+- `eval_variable` – evaluasi ekspresi dengan kedalaman custom.
+- `get_debugger_output` – tarik STDOUT/STDERR + konteks debug.
+- `close` – hentikan sesi debugger aktif.
+
+Proxy mencoba menjalankan binary `mcp-go-debugger` dari PATH. Jika tidak ada, gibRun fallback ke `go run ./cmd/mcp-go-debugger` di dalam folder `external/mcp-go-debugger`. Anda bisa override perilaku ini melalui environment:
+
+| Env Var | Fungsi |
+|---------|--------|
+| `GIBRUN_GO_DEBUGGER_COMMAND` | Path kustom ke executable `mcp-go-debugger` |
+| `GIBRUN_GO_DEBUGGER_ARGS` | Argumen tambahan (dipisah spasi sederhana) |
+| `GIBRUN_GO_DEBUGGER_CWD` | Working directory untuk proses debugger |
+
+Jika proxy gagal start (misalnya Go/delve belum ter-install), server tetap berjalan dengan tools lokal saja.
 
 ## 🔄 Typical Workflow
 
@@ -465,4 +496,3 @@ MIT License - see `LICENSE` file
 **Built with ❤️ for Backend Developers**
 
 gibRun - Making API testing intelligent, automated, and enjoyable.
-

@@ -83,8 +83,8 @@ Never commit real database URIs or API tokens; rely on `.env` files ignored by g
 ### Tool & Subagent Optimization Rules
 
 #### **MANDATORY: Context Management**
-- **ALWAYS** use memory tools (`openmemory_openmemory.query/store`) before/after ANY task
-- **ALWAYS** use specialized tools over generic ones
+- **ALWAYS** use available memory/context tools before/after ANY task
+- **ALWAYS** use specialized tools over generic ones when available
 - **ALWAYS** batch operations to reduce context usage
 - **FORBIDDEN**: Starting tasks without context retrieval
 
@@ -97,7 +97,7 @@ Never commit real database URIs or API tokens; rely on `.env` files ignored by g
 #### **Task Planning Guidelines**
 1. **Analyze Requirements**: Understand scope and complexity
 2. **Create TODO Plan**: Break down into actionable, prioritized tasks
-3. **Delegate Smartly**: Choose appropriate subagent type (developer-agent, etc.)
+3. **Delegate Smartly**: Choose appropriate subagent type based on available options
 4. **Provide Context**: Include codebase structure, existing patterns, requirements
 5. **Monitor Progress**: Track completion and adjust plan as needed
 
@@ -112,7 +112,7 @@ Never commit real database URIs or API tokens; rely on `.env` files ignored by g
 - ✅ Complex multi-step implementations (>3 steps)
 - ✅ Large feature development requiring multiple components
 - ✅ Code refactoring affecting multiple files
-- ✅ Integration testing requiring Docker/real services
+- ✅ Integration testing requiring external services
 - ✅ Performance optimization across multiple modules
 
 #### **When NOT to Use Subagents**
@@ -122,17 +122,11 @@ Never commit real database URIs or API tokens; rely on `.env` files ignored by g
 - ❌ Configuration changes only
 - ❌ Trivial tasks with immediate solutions
 
-#### **Subagent Selection Guide**
-- **`developer-agent`**: Code implementation, refactoring, new features
-- **`project-manager-agent`**: Complex multi-step coordination
-- **`code-review-agent`**: Quality assurance, linting, standards compliance
-- **`build-agent`**: Compilation, deployment, CI/CD setup
-
 #### **Context Optimization Techniques**
-- **Batch File Operations**: Use `multi-file-reader` instead of individual reads
-- **Parallel Tool Calls**: Execute independent operations simultaneously
-- **Memory-First Approach**: Query existing knowledge before tool usage
-- **Selective Reading**: Read only relevant sections of large files
+- **Batch Operations**: Group related operations when possible
+- **Parallel Execution**: Run independent operations simultaneously
+- **Memory-First**: Leverage existing knowledge/context before new operations
+- **Selective Reading**: Read only relevant sections of files
 - **Reference Linking**: Use file paths and line numbers for navigation
 
 #### **Quality Assurance for Agent Work**

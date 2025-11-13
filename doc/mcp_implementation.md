@@ -280,23 +280,214 @@ Use the postgres_query tool to check recent user registrations.
 
 ## Environment Variables
 
+### Complete Environment Variables Reference
+
+gibRun MCP Server supports comprehensive environment variable configuration for different deployment scenarios, security settings, performance tuning, and feature flags.
+
 ### Database Configuration
 
 #### Option 1: Individual Environment Variables (Recommended for Development)
 
-| Variable | Description | Default | Example |
-|----------|-------------|---------|---------|
-| `POSTGRES_USER` | Database username | - | `postgres` |
-| `POSTGRES_PASSWORD` | Database password | - | `postgres` |
-| `POSTGRES_HOST` | Database host | `localhost` | `localhost` |
-| `POSTGRES_PORT` | Database port | `5432` | `5432` |
-| `POSTGRES_DB` | Database name | - | `hairkatz_0_0_1` |
+| Variable | Description | Default | Example | Required |
+|----------|-------------|---------|---------|----------|
+| `POSTGRES_USER` | Database username | - | `postgres` | ✅ |
+| `POSTGRES_PASSWORD` | Database password | - | `postgres` | ✅ |
+| `POSTGRES_HOST` | Database host | `localhost` | `localhost` | ❌ |
+| `POSTGRES_PORT` | Database port | `5432` | `5432` | ❌ |
+| `POSTGRES_DB` | Database name | - | `hairkatz_0_0_1` | ✅ |
 
 #### Option 2: Connection String (Alternative)
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `POSTGRES_CONNECTION_STRING` | Full PostgreSQL connection string | `postgresql://user:pass@host:port/dbname` |
+| Variable | Description | Example | Required |
+|----------|-------------|---------|----------|
+| `POSTGRES_CONNECTION_STRING` | Full PostgreSQL connection string | `postgresql://user:pass@host:port/dbname` | ✅ (replaces individual vars) |
+
+#### Production Database Variables
+
+| Variable | Description | Default | Example | Required |
+|----------|-------------|---------|---------|----------|
+| `DB_USER` | Production database username | `gibrun` | `prod_user` | ❌ |
+| `DB_PASSWORD` | Production database password | - | `secure_password` | ❌ |
+| `DB_NAME` | Production database name | `gibrun` | `prod_database` | ❌ |
+
+### Application Configuration
+
+| Variable | Description | Default | Example | Required |
+|----------|-------------|---------|---------|----------|
+| `NODE_ENV` | Node environment | `development` | `production` | ❌ |
+| `LOG_LEVEL` | Logging level | `info` | `debug` | ❌ |
+| `DEBUG` | Enable debug logging | - | `dap:*` | ❌ |
+
+### HTTP Configuration
+
+| Variable | Description | Default | Example | Required |
+|----------|-------------|---------|---------|----------|
+| `REQUEST_TIMEOUT` | HTTP request timeout (ms) | `30000` | `60000` | ❌ |
+| `MAX_REQUEST_SIZE` | Maximum request size | `10mb` | `50mb` | ❌ |
+
+### Logging Configuration
+
+| Variable | Description | Default | Example | Required |
+|----------|-------------|---------|---------|----------|
+| `MCP_LOG_DIR` | Custom log directory path | `./logs` | `/var/log/gibrun` | ❌ |
+| `MCP_LOG_FILE` | Custom log file path | `./logs/gibrun.log` | `/var/log/gibrun/mcp.log` | ❌ |
+
+### Monitoring & Security
+
+| Variable | Description | Default | Example | Required |
+|----------|-------------|---------|---------|----------|
+| `SENTRY_DSN` | Sentry error tracking | - | `https://...@sentry.io/...` | ❌ |
+| `PROMETHEUS_METRICS_ENABLED` | Enable Prometheus metrics | `false` | `true` | ❌ |
+| `JWT_SECRET` | JWT signing secret | - | `your-jwt-secret` | ❌ |
+| `API_KEY` | API key for authentication | - | `your-api-key` | ❌ |
+
+### Testing Configuration
+
+| Variable | Description | Default | Example | Required |
+|----------|-------------|---------|---------|----------|
+| `VITEST_MAX_CONCURRENCY` | Vitest max concurrent tests | `3` | `5` | ❌ |
+| `VITEST_MAX_WORKERS` | Vitest max worker threads | `2` | `4` | ❌ |
+| `TEST_SECURE_MODE` | Enable secure testing mode | - | `1` | ❌ |
+
+### CI/CD Configuration
+
+| Variable | Description | Default | Example | Required |
+|----------|-------------|---------|---------|----------|
+| `GITHUB_REPOSITORY` | GitHub repository name | - | `owner/repo` | ❌ (CI only) |
+| `GITHUB_REF_NAME` | GitHub branch name | - | `main` | ❌ (CI only) |
+| `GITHUB_SHA` | GitHub commit SHA | - | `abc123...` | ❌ (CI only) |
+| `GITHUB_RUN_ID` | GitHub Actions run ID | - | `123456789` | ❌ (CI only) |
+| `AWS_REGION` | AWS region for S3 storage | `us-east-1` | `eu-west-1` | ❌ |
+| `ANALYSIS_RESULTS_BUCKET` | S3 bucket for analysis results | - | `my-analysis-bucket` | ❌ |
+
+### Go Debugger Configuration
+
+| Variable | Description | Default | Example | Required |
+|----------|-------------|---------|---------|----------|
+| `GIBRUN_GO_DEBUGGER_COMMAND` | Path to Go debugger executable | - | `/path/to/dlv` | ❌ |
+| `GIBRUN_GO_DEBUGGER_ARGS` | Additional debugger arguments | - | `--log --log-output=rpc` | ❌ |
+| `GIBRUN_GO_DEBUGGER_CWD` | Working directory for debugger | - | `/path/to/project` | ❌ |
+| `GIBRUN_DEBUG` | Enable Go debugger debug mode | - | `1` | ❌ |
+
+### Feature Flags
+
+| Variable | Description | Default | Example | Required |
+|----------|-------------|---------|---------|----------|
+| `ENABLE_DAP_DEBUGGING` | Enable DAP debugging tools | `true` | `false` | ❌ |
+| `ENABLE_HTTP_MOCKING` | Enable HTTP mocking features | `false` | `true` | ❌ |
+| `ENABLE_DATABASE_TOOLS` | Enable database operation tools | `true` | `false` | ❌ |
+| `ENABLE_FILE_SYSTEM_TOOLS` | Enable file system tools | `true` | `false` | ❌ |
+| `ENABLE_REAL_TIME_ANALYSIS` | Enable real-time analysis features | `false` | `true` | ❌ |
+
+### Environment Variable Categories
+
+#### 🔧 **Core Configuration**
+Required for basic gibRun operation:
+- `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`
+- `NODE_ENV`
+
+#### 🔒 **Security & Authentication**
+For production deployments:
+- `JWT_SECRET`, `API_KEY`
+- `SENTRY_DSN`
+
+#### 📊 **Monitoring & Observability**
+For production monitoring:
+- `PROMETHEUS_METRICS_ENABLED`
+- `LOG_LEVEL`, `MCP_LOG_DIR`, `MCP_LOG_FILE`
+
+#### 🧪 **Development & Testing**
+For development and CI/CD:
+- `DEBUG`, `VITEST_*`
+- `GITHUB_*`, `AWS_REGION`
+
+#### 🐛 **Debugging & Troubleshooting**
+For debugging issues:
+- `GIBRUN_DEBUG`, `GIBRUN_GO_DEBUGGER_*`
+- `LOG_LEVEL=debug`
+
+#### ⚡ **Performance Tuning**
+For performance optimization:
+- `REQUEST_TIMEOUT`, `MAX_REQUEST_SIZE`
+- `VITEST_MAX_CONCURRENCY`, `VITEST_MAX_WORKERS`
+
+### Environment Variable Usage Examples
+
+#### Development Setup
+```bash
+# Basic development configuration
+export POSTGRES_USER=postgres
+export POSTGRES_PASSWORD=postgres
+export POSTGRES_DB=myapp_dev
+export NODE_ENV=development
+export LOG_LEVEL=info
+```
+
+#### Production Setup
+```bash
+# Production configuration with security
+export POSTGRES_CONNECTION_STRING=postgresql://prod_user:secure_pass@prod-host:5432/prod_db
+export NODE_ENV=production
+export LOG_LEVEL=warn
+export SENTRY_DSN=https://your-sentry-dsn@sentry.io/project
+export JWT_SECRET=your-256-bit-secret
+export PROMETHEUS_METRICS_ENABLED=true
+```
+
+#### Testing Setup
+```bash
+# Testing configuration
+export NODE_ENV=test
+export POSTGRES_USER=testuser
+export POSTGRES_PASSWORD=testpass
+export POSTGRES_DB=testdb
+export VITEST_MAX_CONCURRENCY=5
+export VITEST_MAX_WORKERS=3
+```
+
+#### Debug Mode
+```bash
+# Enable debug logging
+export LOG_LEVEL=debug
+export DEBUG=dap:*
+export GIBRUN_DEBUG=1
+```
+
+#### CI/CD Setup
+```bash
+# GitHub Actions environment (automatically provided)
+export GITHUB_REPOSITORY=owner/repo
+export GITHUB_REF_NAME=main
+export GITHUB_SHA=abc123...
+export GITHUB_RUN_ID=123456789
+
+# Custom CI configuration
+export AWS_REGION=us-east-1
+export ANALYSIS_RESULTS_BUCKET=my-analysis-results
+```
+
+### Environment Variable Priority
+
+1. **Explicit Variables**: Individual `POSTGRES_*` variables take precedence over `POSTGRES_CONNECTION_STRING`
+2. **Defaults**: Sensible defaults are provided for optional variables
+3. **Validation**: Required variables are validated at startup
+4. **Security**: Sensitive values are masked in logs and error messages
+
+### Environment File Support
+
+gibRun supports `.env` files for local development:
+
+```bash
+# .env file example
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_DB=myapp_dev
+NODE_ENV=development
+LOG_LEVEL=info
+DEBUG=dap:*
+```
+
+**Note**: Never commit `.env` files to version control. Use `.env.example` for templates.
 
 #### Production Environment Variables
 

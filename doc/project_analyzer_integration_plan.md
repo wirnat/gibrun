@@ -28,6 +28,45 @@ This document outlines the integration strategy for incorporating the Project An
 - **Server Registration**: `src/core/server.ts` (lines 37, 268-273)
 - **Test Coverage**: `test/unit/tools/project-analyzer.test.ts` (13 tests)
 
+### ⚠️ **Testing Scope Limitation**
+**Current Testing Coverage:** Structural MCP integration only
+- ✅ **MCP Tool Registration**: Tool schemas, error handling, routing tested
+- ✅ **Server Integration**: Proper registration and response formatting tested
+- ✅ **Protocol Compliance**: MCP protocol adherence verified
+- ❌ **Analyzer Logic**: No tests for actual analysis algorithms (still placeholder)
+- ❌ **Data Collection**: No tests for file parsing or metrics collection
+
+**Testing Expansion Needed:**
+- Add tests for real analyzer implementations (Phase 5)
+- Create integration tests with actual analysis workflows
+- Add performance and accuracy validation tests
+
+## ⚠️ **Critical Implementation Status Update**
+
+### **MCP Integration: ✅ FULLY COMPLETE**
+- All 6 MCP tools are properly registered and functional
+- Tool schemas, error handling, and MCP protocol compliance verified
+- Integration tests passing (13/13 tests)
+
+### **Analyzer Logic: ⚠️ PLACEHOLDER ONLY**
+**Important Limitation:** While MCP integration is complete, the actual analysis algorithms are still placeholder implementations.
+
+**Current Behavior:**
+- ✅ **Tools Registered**: All 6 tools available through MCP
+- ⚠️ **Analysis Results**: Return placeholder messages like `"architecture analysis not yet implemented"`
+- ❌ **Real Analysis**: No actual code analysis, metrics collection, or insights generation
+
+**Impact on Users:**
+- Tools can be called via MCP but return non-functional placeholder responses
+- Documentation should clarify this limitation
+- Users should not expect working analysis features yet
+
+### **Next Steps Required:**
+1. **Implement Core Analyzers**: Replace placeholder logic with real analysis algorithms
+2. **Add Data Collection**: Build file parsing and metrics collection capabilities
+3. **Create Analysis Pipeline**: Develop comprehensive analysis workflow
+4. **Update Documentation**: Revise docs to reflect working implementation
+
 ## Integration Architecture
 
 ### MCP Tool Registration

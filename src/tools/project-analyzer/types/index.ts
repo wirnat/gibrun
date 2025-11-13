@@ -238,7 +238,7 @@ export interface QualityRecommendation {
   title: string;
   description: string;
   actions: string[];
-  priority: 'low' | 'medium' | 'high';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
 }
 
 export interface FileQualityResult {

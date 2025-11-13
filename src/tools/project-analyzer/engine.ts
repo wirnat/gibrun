@@ -1,27 +1,36 @@
 // src/tools/project-analyzer/engine.ts
-import { AnalysisOperation, AnalysisConfig, AnalysisResult } from './types/index.js';
-
-// Placeholder analyzers - will be implemented
-class BaseAnalyzer {
-  async analyze(data: any, config: AnalysisConfig): Promise<any> {
-    return { message: `${config.operation} analysis not yet implemented` };
-  }
-}
+import { AnalysisOperation, AnalysisConfig, AnalysisResult, RawProjectData } from './types/index.js';
+import { DataCollectorManager, CodeMetricsCollector, DependencyCollector, GitHistoryCollector } from './collectors/index.js';
+import { ArchitectureAnalyzer, QualityAnalyzer, DependenciesAnalyzer, MetricsAnalyzer, HealthAnalyzer, InsightsAnalyzer } from './analyzers/index.js';
+import { BaseAnalyzer } from './types/index.js';
 
 export class ProjectAnalysisEngine {
   private analyzers: Map<AnalysisOperation, BaseAnalyzer> = new Map();
+  private dataCollector: DataCollectorManager;
 
-  constructor() {
+  constructor(projectRoot?: string) {
+    this.dataCollector = new DataCollectorManager(projectRoot);
+    this.registerCollectors();
     this.registerAnalyzers();
   }
 
+  private registerCollectors(): void {
+    const projectRoot = this.dataCollector.getProjectRoot();
+
+    // Register data collectors
+    this.dataCollector.registerCollector('CodeMetricsCollector', new CodeMetricsCollector(projectRoot));
+    this.dataCollector.registerCollector('DependencyCollector', new DependencyCollector(projectRoot));
+    this.dataCollector.registerCollector('GitHistoryCollector', new GitHistoryCollector(projectRoot));
+  }
+
   private registerAnalyzers(): void {
-    this.analyzers.set('architecture', new BaseAnalyzer());
-    this.analyzers.set('quality', new BaseAnalyzer());
-    this.analyzers.set('dependencies', new BaseAnalyzer());
-    this.analyzers.set('metrics', new BaseAnalyzer());
-    this.analyzers.set('health', new BaseAnalyzer());
-    this.analyzers.set('insights', new BaseAnalyzer());
+    // Implemented analyzers
+    this.analyzers.set('architecture', new ArchitectureAnalyzer());
+    this.analyzers.set('quality', new QualityAnalyzer());
+    this.analyzers.set('dependencies', new DependenciesAnalyzer());
+    this.analyzers.set('metrics', new MetricsAnalyzer());
+    this.analyzers.set('health', new HealthAnalyzer());
+    this.analyzers.set('insights', new InsightsAnalyzer());
   }
 
   async analyze(operation: AnalysisOperation, config: AnalysisConfig): Promise<AnalysisResult> {
@@ -33,8 +42,12 @@ export class ProjectAnalysisEngine {
         throw new Error(`Unknown analysis operation: ${operation}`);
       }
 
-      const data = { files: [], dependencies: [] };
-      const result = await analyzer.analyze(data, config);
+      // Collect data based on scope
+      const rawData = await this.dataCollector.collect(config.scope);
+      const filesAnalyzed = rawData.files?.length || 0;
+
+      // Perform analysis
+      const result = await analyzer.analyze(rawData, config);
 
       return {
         operation,
@@ -43,9 +56,9 @@ export class ProjectAnalysisEngine {
         data: result,
         metadata: {
           analysisTime: Date.now() - startTime,
-          dataPoints: 1,
+          dataPoints: Object.keys(rawData).length,
           cacheUsed: false,
-          filesAnalyzed: 0,
+          filesAnalyzed,
           scope: config.scope || 'full',
           version: '1.0.0'
         }
@@ -65,7 +78,7 @@ export class ProjectAnalysisEngine {
           scope: config.scope || 'full',
           version: '1.0.0'
         },
-        error: error.message
+        error: error?.message || 'Unknown error'
       };
     }
   }
@@ -77,5 +90,10 @@ export class ProjectAnalysisEngine {
     } catch {
       return false;
     }
+  }
+
+  // Get data collector manager for external access
+  getDataCollector(): DataCollectorManager {
+    return this.dataCollector;
   }
 }

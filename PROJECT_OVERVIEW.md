@@ -22,28 +22,31 @@ Backend programmer sering menghadapi workflow testing yang repetitif:
 ## 🏗️ Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        AI Assistant                         │
-│                  (Claude, GPT, etc.)                        │
-└────────────────────────┬────────────────────────────────────┘
-                         │ MCP Protocol
-                         │
-┌────────────────────────┴────────────────────────────────────┐
-│                   gibRun MCP Server                         │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │                      Tools                            │  │
-│  │  • postgres_query     • http_request                 │  │
-│  │  • build_go_project   • run_go_command               │  │
-│  │  • read_source_file   • write_source_file            │  │
-│  │  • execute_shell_command                             │  │
-│  └──────────────────────────────────────────────────────┘  │
-└───┬────────────┬────────────────┬────────────────┬─────────┘
-    │            │                │                │
-    ▼            ▼                ▼                ▼
-┌────────┐  ┌─────────┐  ┌──────────────┐  ┌──────────┐
-│   DB   │  │   API   │  │  Go Project  │  │   Files  │
-│ Postgres  │  HTTP   │  │   Builder    │  │  System  │
-└────────┘  └─────────┘  └──────────────┘  └──────────┘
+ ┌─────────────────────────────────────────────────────────────┐
+ │                        AI Assistant                         │
+ │                  (Claude, GPT, etc.)                        │
+ └────────────────────────┬────────────────────────────────────┘
+                          │ MCP Protocol
+                          │
+ ┌────────────────────────┴────────────────────────────────────┐
+ │                   gibRun MCP Server                         │
+ │  ┌──────────────────────────────────────────────────────┐  │
+ │  │                      Tools                            │  │
+ │  │  • postgres_query     • http_request                 │  │
+ │  │  • build_go_project   • run_go_command               │  │
+ │  │  • read_source_file   • write_source_file            │  │
+ │  │  • multi_file_reader • multi_file_editor             │  │
+ │  │  • project_file_manager • file_template_manager      │  │
+ │  │  • execute_shell_command • dap_restart               │  │
+ │  │  • dap_send_command   • debugger_tools (10+)         │  │
+ │  └──────────────────────────────────────────────────────┘  │
+ └───┬────────────┬────────────────┬────────────────┬─────────┘
+     │            │                │                │
+     ▼            ▼                ▼                ▼
+ ┌────────┐  ┌─────────┐  ┌──────────────┐  ┌──────────┐
+ │   DB   │  │   API   │  │  Go Project  │  │   Files  │
+ │ Postgres  │  HTTP   │  │   Builder    │  │  System  │
+ └────────┘  └─────────┘  └──────────────┘  └──────────┘
 ```
 
 Mulai versi ini, arsitektur juga menyertakan **Go Debugger Proxy** yang menjalankan `external/mcp-go-debugger` di dalam proses terpisah melalui transport STDIO MCP client. Semua tool debugger Delve dari proyek tersebut diteruskan secara transparan ke AI assistant, sehingga gibRun dapat melakukan **launch/attach**, mengatur breakpoint, dan menganalisis variabel langsung dari workspace yang sama tanpa menjalankan dua MCP server terpisah.
@@ -75,6 +78,12 @@ gibRun/
 │
 ├── config.example.json       # Configuration template
 ├── docker-compose.yml        # PostgreSQL setup
+│
+├── .gibrun/                  # Template system
+│   ├── config.json          # Template configuration
+│   └── templates/           # Code templates
+│       ├── api/             # API templates
+│       └── database/        # Database templates
 │
 ├── README.md                 # Main documentation
 ├── QUICKSTART.md             # 10-minute getting started
@@ -193,12 +202,73 @@ Execute arbitrary shell commands:
 }
 ```
 
-### 8. **dap_restart** 🔥 NEW
-Restart VSCode debugger via Debug Adapter Protocol:
+### 8. **multi_file_reader** 🔥 NEW
+Read multiple source files simultaneously:
+- Batch file reading for analysis
+- Project-wide code examination
+- Efficient multi-file operations
+
+**Example**:
+```typescript
+{
+  paths: ["/path/to/file1.go", "/path/to/file2.go"],
+  max_file_size_kb: 1024
+}
+```
+
+### 9. **multi_file_editor** 🔥 NEW
+Edit multiple files with advanced operations:
+- Batch find and replace across files
+- Template-based code generation
+- Bulk refactoring operations
+
+**Example**:
+```typescript
+{
+  base_dir: "/path/to/project",
+  edits: [{
+    file_path: "handlers/user.go",
+    old_string: "old code",
+    new_string: "new code"
+  }]
+}
+```
+
+### 10. **project_file_manager** 🔥 NEW
+Advanced project file management:
+- Project structure analysis
+- File organization and validation
+- Bulk file operations with safety checks
+
+**Example**:
+```typescript
+{
+  operation: "analyze",
+  base_dir: "/path/to/project",
+  include_patterns: ["*.go", "*.ts"]
+}
+```
+
+### 11. **file_template_manager** 🔥 NEW
+Template-based file generation:
+- Code scaffolding from templates
+- Consistent file structure creation
+- Template management and customization
+
+**Example**:
+```typescript
+{
+  template_name: "express-route",
+  output_path: "routes/users.js",
+  variables: { entity: "User", path: "/users" }
+}
+```
+
+### 12. **dap_restart** 🔥 NEW
+Restart debugging session via Debug Adapter Protocol:
 - Hot reload after code fixes
 - Auto rebuild before restart
 - Preserve breakpoints
-- Seamless debugging workflow
 
 **Example**:
 ```typescript
@@ -210,7 +280,7 @@ Restart VSCode debugger via Debug Adapter Protocol:
 }
 ```
 
-### 9. **dap_send_command** 🔥 NEW
+### 13. **dap_send_command** 🔥 NEW
 Send custom DAP commands for advanced control:
 - Set breakpoints programmatically
 - Evaluate expressions
@@ -225,7 +295,7 @@ Send custom DAP commands for advanced control:
 }
 ```
 
-### 10. **Debugger Toolset (proxied from `external/mcp-go-debugger`)**
+### 14. **Debugger Toolset (proxied from `external/mcp-go-debugger`)**
 
 gibRun kini menjalankan instance `mcp-go-debugger` di belakang layar dan mengekspos seluruh tool-nya:
 
@@ -456,6 +526,8 @@ We welcome contributions! See `CONTRIBUTING.md` for:
 | Manual code fixing | AI-assisted fixes |
 | Manual rebuild | Automatic rebuild |
 | Manual retest | Automatic retest |
+| Single file editing | Multi-file batch operations |
+| Manual file management | Template-based scaffolding |
 | Minutes per test | Seconds per test |
 | Error-prone | Consistent & reliable |
 | No test history | Full test reports |

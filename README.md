@@ -91,6 +91,40 @@ npm install
 npm run build
 ```
 
+## Deployment
+
+### Production Deployment
+
+For production deployment with Docker and monitoring:
+
+```bash
+# Clone repository
+git clone https://github.com/your-org/gibrun-mcp-server.git
+cd gibrun-mcp-server
+
+# Configure environment
+cp .env.example .env.production
+# Edit .env.production with your production values
+
+# Deploy with monitoring stack
+docker-compose -f docker-compose.prod.yml --profile monitoring --env-file .env.production up -d
+
+# Or use the automated deployment script
+chmod +x scripts/deploy.sh
+ENV_FILE=.env.production ./scripts/deploy.sh
+```
+
+### Services Included
+
+- **gibrun-mcp**: Main MCP server
+- **PostgreSQL**: Database for testing
+- **Redis**: Caching layer (optional)
+- **Prometheus**: Metrics collection
+- **Grafana**: Monitoring dashboards
+- **Nginx**: Reverse proxy
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed deployment instructions.
+
 ## Konfigurasi
 
 ### Menambahkan ke Claude Desktop

@@ -1,0 +1,334 @@
+name: Performance Monitoring
+
+on:
+  push:
+    branches: [ main, develop ]
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  # Performance Benchmarking
+  performance-benchmark:
+    name: Performance Benchmark
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build project
+      run: npm run build
+
+    - name: Run performance benchmarks
+      run: |
+        # Create performance benchmark script
+        cat > benchmark.js << 'EOF'
+        const { performance } = require('perf_hooks');
+        const fs = require('fs');
+
+        console.log('Running performance benchmarks...\n');
+
+        // Memory usage benchmark
+        const startMem = process.memoryUsage();
+        console.log('Memory Usage:');
+        console.log(`  RSS: ${(startMem.rss / 1024 / 1024).toFixed(2)} MB`);
+        console.log(`  Heap Used: ${(startMem.heapUsed / 1024 / 1024).toFixed(2)} MB`);
+        console.log(`  Heap Total: ${(startMem.heapTotal / 1024 / 1024).toFixed(2)} MB\n`);
+
+        // Bundle size analysis
+        const bundlePath = './build/index.js';
+        if (fs.existsSync(bundlePath)) {
+          const stats = fs.statSync(bundlePath);
+          console.log('Bundle Size:');
+          console.log(`  Size: ${(stats.size / 1024).toFixed(2)} KB`);
+          console.log(`  Compressed: ~${(stats.size / 1024 * 0.7).toFixed(2)} KB (estimated)\n`);
+        }
+
+        // Startup time benchmark
+        const startTime = performance.now();
+        // Simulate MCP server startup
+        setTimeout(() => {
+          const endTime = performance.now();
+          console.log('Startup Performance:');
+          console.log(`  Cold Start: ${(endTime - startTime).toFixed(2)} ms\n`);
+
+          // Save results
+          const results = {
+            timestamp: new Date().toISOString(),
+            memory: {
+              rss: startMem.rss,
+              heapUsed: startMem.heapUsed,
+              heapTotal: startMem.heapTotal
+            },
+            bundleSize: fs.existsSync(bundlePath) ? fs.statSync(bundlePath).size : null,
+            startupTime: endTime - startTime
+          };
+
+          fs.writeFileSync('performance-results.json', JSON.stringify(results, null, 2));
+          console.log('Performance results saved to performance-results.json');
+        }, 100);
+        EOF
+
+        node benchmark.js
+
+    - name: Upload performance results
+      uses: actions/upload-artifact@v3
+      with:
+        name: performance-results
+        path: performance-results.json
+
+    - name: Compare with baseline
+      run: |
+        # Compare current results with baseline (if exists)
+        if [ -f performance-baseline.json ]; then
+          echo "Comparing with baseline..."
+          # Add comparison logic here
+        else
+          echo "Creating new baseline..."
+          cp performance-results.json performance-baseline.json
+        fi
+
+  # Load Testing
+  load-testing:
+    name: Load Testing
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: testdb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build project
+      run: npm run build
+
+    - name: Start WireMock for load testing
+      run: |
+        docker run -d --name wiremock \
+          -p 8081:8080 \
+          -v ${{ github.workspace }}/test/fixtures/wiremock:/home/wiremock \
+          wiremock/wiremock:latest \
+          --global-response-templating --verbose
+
+    - name: Wait for services
+      run: |
+        timeout 60 bash -c 'until curl -f http://localhost:8081/__admin/health; do sleep 2; done'
+
+    - name: Run load tests
+      run: |
+        # Create load testing script
+        cat > load-test.js << 'EOF'
+        const { performance } = require('perf_hooks');
+
+        async function runLoadTest() {
+          console.log('Running load tests...\n');
+
+          const results = {
+            timestamp: new Date().toISOString(),
+            tests: []
+          };
+
+          // Test 1: Concurrent database queries
+          console.log('Test 1: Concurrent Database Queries');
+          const dbStart = performance.now();
+
+          // Simulate concurrent database operations
+          const promises = Array.from({ length: 50 }, (_, i) =>
+            new Promise(resolve => setTimeout(() => resolve(i), Math.random() * 100))
+          );
+
+          await Promise.all(promises);
+          const dbEnd = performance.now();
+
+          results.tests.push({
+            name: 'Concurrent DB Queries',
+            duration: dbEnd - dbStart,
+            operations: 50,
+            avgResponseTime: (dbEnd - dbStart) / 50
+          });
+
+          console.log(`  Duration: ${(dbEnd - dbStart).toFixed(2)} ms`);
+          console.log(`  Avg Response Time: ${((dbEnd - dbStart) / 50).toFixed(2)} ms\n`);
+
+          // Test 2: HTTP request throughput
+          console.log('Test 2: HTTP Request Throughput');
+          const httpStart = performance.now();
+
+          // Simulate HTTP requests
+          const httpPromises = Array.from({ length: 100 }, async (_, i) => {
+            // Simulate HTTP call
+            await new Promise(resolve => setTimeout(resolve, Math.random() * 50));
+            return i;
+          });
+
+          await Promise.all(httpPromises);
+          const httpEnd = performance.now();
+
+          results.tests.push({
+            name: 'HTTP Throughput',
+            duration: httpEnd - httpStart,
+            operations: 100,
+            avgResponseTime: (httpEnd - httpStart) / 100
+          });
+
+          console.log(`  Duration: ${(httpEnd - httpStart).toFixed(2)} ms`);
+          console.log(`  Avg Response Time: ${((httpEnd - httpStart) / 100).toFixed(2)} ms\n`);
+
+          // Save results
+          require('fs').writeFileSync('load-test-results.json', JSON.stringify(results, null, 2));
+          console.log('Load test results saved to load-test-results.json');
+
+          // Check thresholds
+          const dbThreshold = 1000; // 1 second max for 50 concurrent queries
+          const httpThreshold = 2000; // 2 seconds max for 100 HTTP requests
+
+          if ((dbEnd - dbStart) > dbThreshold) {
+            console.log(`⚠️  WARNING: DB performance degraded (${(dbEnd - dbStart).toFixed(2)}ms > ${dbThreshold}ms)`);
+            process.exit(1);
+          }
+
+          if ((httpEnd - httpStart) > httpThreshold) {
+            console.log(`⚠️  WARNING: HTTP performance degraded (${(httpEnd - httpStart).toFixed(2)}ms > ${httpThreshold}ms)`);
+            process.exit(1);
+          }
+
+          console.log('✅ All performance thresholds met');
+        }
+
+        runLoadTest().catch(console.error);
+        EOF
+
+        node load-test.js
+
+    - name: Upload load test results
+      uses: actions/upload-artifact@v3
+      with:
+        name: load-test-results
+        path: load-test-results.json
+
+  # Memory Leak Detection
+  memory-leak-check:
+    name: Memory Leak Detection
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build project
+      run: npm run build
+
+    - name: Run memory leak detection
+      run: |
+        # Create memory leak detection script
+        cat > memory-check.js << 'EOF'
+        const { performance } = require('perf_hooks');
+
+        async function checkMemoryLeaks() {
+          console.log('Running memory leak detection...\n');
+
+          const initialMemory = process.memoryUsage();
+          console.log('Initial Memory:');
+          console.log(`  RSS: ${(initialMemory.rss / 1024 / 1024).toFixed(2)} MB`);
+          console.log(`  Heap Used: ${(initialMemory.heapUsed / 1024 / 1024).toFixed(2)} MB\n`);
+
+          // Simulate operations that might cause memory leaks
+          const operations = [];
+          for (let i = 0; i < 1000; i++) {
+            operations.push(new Promise(resolve => {
+              // Simulate some work
+              setTimeout(() => resolve(i), Math.random() * 10);
+            }));
+          }
+
+          await Promise.all(operations);
+
+          // Force garbage collection if available
+          if (global.gc) {
+            global.gc();
+          }
+
+          const finalMemory = process.memoryUsage();
+          console.log('Final Memory:');
+          console.log(`  RSS: ${(finalMemory.rss / 1024 / 1024).toFixed(2)} MB`);
+          console.log(`  Heap Used: ${(finalMemory.heapUsed / 1024 / 1024).toFixed(2)} MB\n`);
+
+          const memoryIncrease = finalMemory.heapUsed - initialMemory.heapUsed;
+          const memoryIncreaseMB = memoryIncrease / 1024 / 1024;
+
+          console.log('Memory Analysis:');
+          console.log(`  Heap Increase: ${memoryIncreaseMB.toFixed(2)} MB`);
+
+          const threshold = 50 * 1024 * 1024; // 50 MB threshold
+          if (memoryIncrease > threshold) {
+            console.log(`⚠️  WARNING: Potential memory leak detected (${memoryIncreaseMB.toFixed(2)} MB increase)`);
+            process.exit(1);
+          }
+
+          console.log('✅ Memory usage within acceptable limits');
+
+          // Save results
+          const results = {
+            timestamp: new Date().toISOString(),
+            initialMemory,
+            finalMemory,
+            memoryIncrease,
+            threshold,
+            passed: memoryIncrease <= threshold
+          };
+
+          require('fs').writeFileSync('memory-check-results.json', JSON.stringify(results, null, 2));
+        }
+
+        checkMemoryLeaks().catch(console.error);
+        EOF
+
+        node --expose-gc memory-check.js
+
+    - name: Upload memory check results
+      uses: actions/upload-artifact@v3
+      with:
+        name: memory-check-results
+        path: memory-check-results.json

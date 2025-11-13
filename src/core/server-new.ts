@@ -6,7 +6,7 @@ import {
     Tool,
 } from "@modelcontextprotocol/sdk/types.js";
 
-import { GoDebuggerProxy } from "@/services/dap-service.js";
+import { GoDebuggerProxy, DAPService } from "@/services/dap-service.js";
 import { logError, logInfo } from "@/services/logger-service.js";
 import { DatabaseService } from "@/services/database-service.js";
 import { HttpService } from "@/services/http-service.js";
@@ -23,8 +23,22 @@ import {
 } from "./tool-handlers.js";
 import {
     handleDAPRestart,
-    handleDAPSendCommand
-} from "./dap-handlers.js";
+    handleDAPSendCommand,
+    // Breakpoint tools
+    handleDAPSetBreakpoints,
+    handleDAPGetBreakpoints,
+    handleDAPClearBreakpoints,
+    // Execution control tools
+    handleDAPContinue,
+    handleDAPStepOver,
+    handleDAPStepInto,
+    handleDAPStepOut,
+    handleDAPPause,
+    // Variable inspection tools
+    handleDAPEvaluate,
+    handleDAPVariables,
+    handleDAPStackTrace
+} from "@/tools/dap/index.js";
 
 // Import tool definitions
 import { DATABASE_TOOLS } from "@/tools/database/index.js";
@@ -37,6 +51,7 @@ const goDebuggerProxy = new GoDebuggerProxy(process.cwd());
 // Service instances
 const databaseService = new DatabaseService();
 const httpService = new HttpService();
+const dapService = new DAPService();
 
 // Tool definitions
 const LOCAL_TOOLS: Tool[] = mergeToolLists(
@@ -88,9 +103,37 @@ async function main() {
 
                 // DAP tools
                 case "dap_restart":
-                    return await handleDAPRestart(args);
+                    return await handleDAPRestart(dapService, args);
                 case "dap_send_command":
-                    return await handleDAPSendCommand(args);
+                    return await handleDAPSendCommand(dapService, args);
+
+                // Breakpoint management tools
+                case "dap_set_breakpoints":
+                    return await handleDAPSetBreakpoints(dapService, args);
+                case "dap_get_breakpoints":
+                    return await handleDAPGetBreakpoints(dapService, args);
+                case "dap_clear_breakpoints":
+                    return await handleDAPClearBreakpoints(dapService, args);
+
+                // Execution control tools
+                case "dap_continue":
+                    return await handleDAPContinue(dapService, args);
+                case "dap_step_over":
+                    return await handleDAPStepOver(dapService, args);
+                case "dap_step_into":
+                    return await handleDAPStepInto(dapService, args);
+                case "dap_step_out":
+                    return await handleDAPStepOut(dapService, args);
+                case "dap_pause":
+                    return await handleDAPPause(dapService, args);
+
+                // Variable inspection tools
+                case "dap_evaluate":
+                    return await handleDAPEvaluate(dapService, args);
+                case "dap_variables":
+                    return await handleDAPVariables(dapService, args);
+                case "dap_stack_trace":
+                    return await handleDAPStackTrace(dapService, args);
 
                 // Legacy tools (delegate to GoDebuggerProxy)
                 default:

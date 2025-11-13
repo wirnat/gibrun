@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
 
   # Optional: pgAdmin for database management
@@ -19,13 +17,14 @@ services:
   # Test database - separate from development
   test-postgres:
     image: postgres:15-alpine
-    container_name: gibrun-test-postgres
+    container_name: ${TEST_CONTAINER_PREFIX:-gibrun}-test-postgres
     environment:
       POSTGRES_USER: testuser
       POSTGRES_PASSWORD: testpass
       POSTGRES_DB: testdb
+      POSTGRES_HOST_AUTH_METHOD: trust  # Allow all connections for testing
     ports:
-      - "5434:5432"  # Different port to avoid conflicts
+      - "${TEST_POSTGRES_PORT:-5434}:5432"  # Different port to avoid conflicts
     volumes:
       - test_postgres_data:/var/lib/postgresql/data
       - ./test/fixtures/schema.sql:/docker-entrypoint-initdb.d/schema.sql
@@ -40,9 +39,9 @@ services:
   # HTTP Mock Server for testing HTTP operations
   http-mock:
     image: wiremock/wiremock:latest
-    container_name: gibrun-http-mock
+    container_name: ${TEST_CONTAINER_PREFIX:-gibrun}-http-mock
     ports:
-      - "8081:8080"
+      - "${TEST_HTTP_PORT:-8081}:8080"
     volumes:
       - ./test/fixtures/wiremock:/home/wiremock
     command: ["--global-response-templating", "--verbose"]
@@ -59,9 +58,9 @@ services:
     build:
       context: ./test/fixtures
       dockerfile: Dockerfile.dap-mock
-    container_name: gibrun-dap-mock
+    container_name: ${TEST_CONTAINER_PREFIX:-gibrun}-dap-mock
     ports:
-      - "49280:49280"
+      - "${TEST_DAP_PORT:-49280}:49280"
     environment:
       - DAP_PORT=49280
     healthcheck:

@@ -20,6 +20,7 @@ import { GoDebuggerProxy } from "@/services/dap-service.js";
 import { logError, logInfo } from "@/services/logger-service.js";
 import { DatabaseService } from "@/services/database-service.js";
 import { HttpService } from "@/services/http-service.js";
+import { FILE_SYSTEM_TOOLS, handleMultiFileReader, handleMultiFileEditor, handleProjectFileManager, handleFileTemplateManager } from "@/tools/file-system/index.js";
 
 const execAsync = promisify(exec);
 const goDebuggerProxy = new GoDebuggerProxy(process.cwd());
@@ -33,6 +34,7 @@ const dbPools = new Map<string, Pool>();
 
 // Tool definitions
 const LOCAL_TOOLS: Tool[] = [
+    ...FILE_SYSTEM_TOOLS,
     {
         name: "postgres_query",
         description:
@@ -260,6 +262,10 @@ const LOCAL_TOOL_HANDLERS: Record<string, ToolHandler> = {
     read_source_file: handleReadSourceFile,
     write_source_file: handleWriteSourceFile,
     execute_shell_command: handleExecuteShellCommand,
+    multi_file_reader: handleMultiFileReader,
+    multi_file_editor: handleMultiFileEditor,
+    project_file_manager: handleProjectFileManager,
+    file_template_manager: handleFileTemplateManager,
     dap_restart: handleDAPRestart,
     dap_send_command: handleDAPSendCommand,
 };
@@ -1394,7 +1400,7 @@ async function main() {
     const server = new Server(
         {
             name: "gibrun-mcp-server",
-            version: "1.0.0",
+            version: "1.1.0",
         },
         {
             capabilities: {

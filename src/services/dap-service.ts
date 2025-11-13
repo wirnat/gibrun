@@ -1,15 +1,32 @@
 import * as net from "net";
 import { logError, logInfo } from "./logger-service.js";
-// Type definitions for DAP messages
+
+// Type definitions for DAP messages and events
 interface DAPMessage {
     seq: number;
     type: string;
     [key: string]: any;
 }
 
+interface DAPEvent {
+    seq: number;
+    type: 'event';
+    event: string;
+    body?: any;
+}
+
+interface DAPEventSubscription {
+    eventType: string;
+    filter?: Record<string, any>;
+    persistent?: boolean;
+    callback?: (event: DAPEvent) => void;
+}
+
 export class DAPService {
     private connections = new Map<string, net.Socket>();
     private sequenceNumber = 1;
+    private eventListeners = new Map<string, ((event: DAPEvent) => void)[]>();
+    private eventSubscriptions = new Map<string, DAPEventSubscription>();
 
     constructor() {}
 
@@ -70,6 +87,12 @@ export class DAPService {
                     try {
                         const message = JSON.parse(messages[0]);
                         socket.removeListener('data', onData);
+
+                        // Handle events
+                        if (message.type === 'event') {
+                            this.handleEvent(message as DAPEvent);
+                        }
+
                         resolve(message);
                     } catch (error) {
                         reject(error);
@@ -85,6 +108,30 @@ export class DAPService {
                 reject(new Error('DAP response timeout'));
             }, 30000);
         });
+    }
+
+    private handleEvent(event: DAPEvent): void {
+        logInfo('DAP Event received', { event: event.event, seq: event.seq });
+
+        // Notify all listeners for this event type
+        const listeners = this.eventListeners.get(event.event) || [];
+        listeners.forEach(callback => {
+            try {
+                callback(event);
+            } catch (error) {
+                logError('Error in DAP event listener', error, { event: event.event });
+            }
+        });
+
+        // Check subscriptions
+        const subscription = this.eventSubscriptions.get(event.event);
+        if (subscription?.callback) {
+            try {
+                subscription.callback(event);
+            } catch (error) {
+                logError('Error in DAP event subscription callback', error, { event: event.event });
+            }
+        }
     }
 
     async sendDAPRequest(host: string, port: number, command: string, args?: any): Promise<DAPMessage> {
@@ -122,6 +169,76 @@ export class DAPService {
             socket.end();
         }
         this.connections.clear();
+        this.eventListeners.clear();
+        this.eventSubscriptions.clear();
+    }
+
+    // Event handling methods
+    addEventListener(eventType: string, callback: (event: DAPEvent) => void): void {
+        if (!this.eventListeners.has(eventType)) {
+            this.eventListeners.set(eventType, []);
+        }
+        this.eventListeners.get(eventType)!.push(callback);
+    }
+
+    removeEventListener(eventType: string, callback: (event: DAPEvent) => void): void {
+        const listeners = this.eventListeners.get(eventType);
+        if (listeners) {
+            const index = listeners.indexOf(callback);
+            if (index > -1) {
+                listeners.splice(index, 1);
+            }
+        }
+    }
+
+    subscribeToEvent(subscription: DAPEventSubscription): void {
+        this.eventSubscriptions.set(subscription.eventType, subscription);
+    }
+
+    unsubscribeFromEvent(eventType: string): void {
+        this.eventSubscriptions.delete(eventType);
+    }
+
+    async listenForEvents(host: string, port: number, options: {
+        eventTypes?: string[];
+        timeoutMs?: number;
+        maxEvents?: number;
+    } = {}): Promise<DAPEvent[]> {
+        const { eventTypes = ['stopped', 'output', 'breakpoint'], timeoutMs = 30000, maxEvents = 100 } = options;
+
+        return new Promise((resolve, reject) => {
+            const events: DAPEvent[] = [];
+            let timeoutId: NodeJS.Timeout;
+
+            const eventHandler = (event: DAPEvent) => {
+                if (eventTypes.includes(event.event)) {
+                    events.push(event);
+
+                    if (events.length >= maxEvents) {
+                        cleanup();
+                        resolve(events);
+                    }
+                }
+            };
+
+            const cleanup = () => {
+                if (timeoutId) clearTimeout(timeoutId);
+                eventTypes.forEach(eventType => {
+                    this.removeEventListener(eventType, eventHandler);
+                });
+            };
+
+            // Add listeners for specified event types
+            eventTypes.forEach(eventType => {
+                this.addEventListener(eventType, eventHandler);
+            });
+
+            // Set timeout
+            timeoutId = setTimeout(() => {
+                cleanup();
+                resolve(events); // Return events collected so far
+            }, timeoutMs);
+        });
     }
 }
 

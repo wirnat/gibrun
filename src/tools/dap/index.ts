@@ -9,6 +9,13 @@ import { logError, logInfo } from "@/services/logger-service.js";
 import { DAP_BREAKPOINT_TOOLS } from "./breakpoint-tools.js";
 import { DAP_EXECUTION_TOOLS } from "./execution-tools.js";
 import { DAP_INSPECTION_TOOLS } from "./inspection-tools.js";
+import { DAP_EVENT_TOOLS } from "./event-tools.js";
+import { DAP_EXCEPTION_TOOLS } from "./exception-tools.js";
+import { DAP_WATCH_TOOLS } from "./watch-tools.js";
+import { DAP_ERROR_TOOLS } from "./error-tools.js";
+import { DAP_THREAD_TOOLS } from "./thread-tools.js";
+import { DAP_MULTI_IDE_TOOLS } from "./multi-ide-tools.js";
+import { DAP_SECURITY_TOOLS } from "./security-tools.js";
 
 const execAsync = promisify(exec);
 
@@ -73,7 +80,16 @@ export const DAP_TOOLS: Tool[] = [
         },
     },
 
-    // New specialized tools
+    // Phase 2: Enhanced Features - HIGH PRIORITY
+    ...DAP_EVENT_TOOLS,
+    ...DAP_EXCEPTION_TOOLS,
+    ...DAP_WATCH_TOOLS,
+    ...DAP_ERROR_TOOLS,
+    ...DAP_THREAD_TOOLS,
+    ...DAP_MULTI_IDE_TOOLS,
+    ...DAP_SECURITY_TOOLS,
+
+    // Existing specialized tools
     ...DAP_BREAKPOINT_TOOLS,
     ...DAP_EXECUTION_TOOLS,
     ...DAP_INSPECTION_TOOLS,
@@ -301,6 +317,29 @@ export async function handleDAPSendCommand(dapService: DAPService, args: any) {
 
 // Re-export all handler functions from specialized tool modules
 export {
+    // Event handling tools
+    handleDAPListenEvents,
+    handleDAPSubscribeEvents
+} from "./event-tools.js";
+
+export {
+    // Exception breakpoint tools
+    handleDAPSetExceptionBreakpoints
+} from "./exception-tools.js";
+
+export {
+    // Watch expression tools
+    handleDAPSetWatch,
+    handleDAPGetWatches,
+    handleDAPClearWatches
+} from "./watch-tools.js";
+
+export {
+    // Advanced error handling tools
+    handleDAPGetErrorDetails
+} from "./error-tools.js";
+
+export {
     // Breakpoint tools
     handleDAPSetBreakpoints,
     handleDAPGetBreakpoints,
@@ -322,3 +361,25 @@ export {
     handleDAPVariables,
     handleDAPStackTrace
 } from "./inspection-tools.js";
+
+export {
+    // Thread management tools
+    handleDAPListThreads,
+    handleDAPSwitchThread,
+    handleDAPThreadInfo
+} from "./thread-tools.js";
+
+export {
+    // Multi-IDE support tools
+    handleDAPDetectIDE,
+    handleDAPConfigureMultiIDE,
+    handleDAPValidateIDESetup
+} from "./multi-ide-tools.js";
+
+export {
+    // Security hardening tools
+    handleDAPValidateInput,
+    handleDAPSetSecurityLimits,
+    handleDAPSecurityAudit,
+    handleDAPSanitizeExpression
+} from "./security-tools.js";

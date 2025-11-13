@@ -23,18 +23,28 @@ services:
       POSTGRES_PASSWORD: testpass
       POSTGRES_DB: testdb
       POSTGRES_HOST_AUTH_METHOD: trust  # Allow all connections for testing
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
     ports:
       - "${TEST_POSTGRES_PORT:-5434}:5432"  # Different port to avoid conflicts
     volumes:
       - test_postgres_data:/var/lib/postgresql/data
       - ./test/fixtures/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    networks:
+      - test-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U testuser"]
+      test: ["CMD-SHELL", "pg_isready -U testuser -h localhost"]
       interval: 10s
       timeout: 5s
       retries: 5
     profiles:
       - test
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/run/postgresql
 
   # HTTP Mock Server for testing HTTP operations
   http-mock:
@@ -43,8 +53,10 @@ services:
     ports:
       - "${TEST_HTTP_PORT:-8081}:8080"
     volumes:
-      - ./test/fixtures/wiremock:/home/wiremock
-    command: ["--global-response-templating", "--verbose"]
+      - ./test/fixtures/wiremock:/home/wiremock:ro  # Read-only volume
+    networks:
+      - test-network
+    command: ["--global-response-templating", "--verbose", "--disable-banner"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/__admin/health"]
       interval: 10s
@@ -52,6 +64,12 @@ services:
       retries: 5
     profiles:
       - test
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
 
   # DAP Mock Server for testing DAP operations
   dap-mock:
@@ -63,6 +81,8 @@ services:
       - "${TEST_DAP_PORT:-49280}:49280"
     environment:
       - DAP_PORT=49280
+    networks:
+      - test-network
     healthcheck:
       test: ["CMD", "nc", "-z", "localhost", "49280"]
       interval: 10s
@@ -70,6 +90,17 @@ services:
       retries: 5
     profiles:
       - test
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+
+networks:
+  test-network:
+    driver: bridge
+    internal: true  # Isolate from external networks
 
 volumes:
   postgres_data:

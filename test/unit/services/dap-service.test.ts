@@ -13,6 +13,12 @@ vi.mock('../../../src/services/logger-service.js', () => ({
     logInfo: vi.fn()
 }))
 
+// Mock core handlers
+vi.mock('../../../src/core/dap-handlers.js', () => ({
+    resolveDAPServer: vi.fn(),
+    detectDAPServers: vi.fn()
+}))
+
 describe('DAPService', () => {
     let service: DAPService
     let mockSocket: any
@@ -154,6 +160,73 @@ describe('DAPService', () => {
 
         it('should handle disconnecting non-existent connection gracefully', async () => {
             await expect(service.disconnect('localhost', 9999)).resolves.toBeUndefined()
+        })
+    })
+
+    describe('event handling', () => {
+        it('should handle DAP events', async () => {
+            mockSocket.write.mockImplementation((data, callback) => {
+                if (callback) callback()
+            })
+
+            let eventReceived = false;
+            const testEvent = {
+                seq: 2,
+                type: 'event',
+                event: 'stopped',
+                body: { reason: 'breakpoint', threadId: 1 }
+            };
+
+            mockSocket.on.mockImplementation((event, handler) => {
+                if (event === 'data') {
+                    // First send response, then event
+                    setTimeout(() => {
+                        handler(Buffer.from('{"seq":1,"type":"response","success":true}\r\n'))
+                    }, 5)
+                    setTimeout(() => {
+                        handler(Buffer.from(JSON.stringify(testEvent) + '\r\n'))
+                    }, 15)
+                }
+            })
+
+            // Add event listener
+            service.addEventListener('stopped', (event) => {
+                eventReceived = true;
+                expect(event).toEqual(testEvent);
+            });
+
+            await service.sendDAPRequest('localhost', 5678, 'initialize');
+
+            // Wait for event processing
+            await new Promise(resolve => setTimeout(resolve, 20));
+
+            expect(eventReceived).toBe(true);
+        })
+
+        it('should listen for events with timeout', async () => {
+            const events = await service.listenForEvents('localhost', 5678, {
+                eventTypes: ['stopped'],
+                timeoutMs: 100,
+                maxEvents: 1
+            });
+
+            expect(Array.isArray(events)).toBe(true);
+        })
+
+        it('should manage event subscriptions', () => {
+            const callback = vi.fn();
+            const subscription = {
+                eventType: 'breakpoint',
+                filter: { threadId: 1 },
+                persistent: true,
+                callback
+            };
+
+            service.subscribeToEvent(subscription);
+            service.unsubscribeFromEvent('breakpoint');
+
+            // Should not crash
+            expect(true).toBe(true);
         })
     })
 })

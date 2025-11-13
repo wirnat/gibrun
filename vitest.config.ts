@@ -9,6 +9,15 @@ export default defineConfig({
     setupFiles: ['./test/setup.ts'],
     include: ['**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     exclude: ['node_modules', 'build', 'test-example'],
+    // Memory optimization settings from environment variables
+    pool: 'threads',
+    maxConcurrency: parseInt(process.env.VITEST_MAX_CONCURRENCY || '3'),
+    maxWorkers: parseInt(process.env.VITEST_MAX_WORKERS || '2'),
+    isolate: true, // Isolate test environments
+    sequence: {
+      concurrent: false, // Run test files sequentially
+      shuffle: false
+    },
     coverage: {
       reporter: ['text', 'json', 'html', 'lcov'],
       exclude: [

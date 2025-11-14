@@ -1,0 +1,30 @@
+{
+  "templates": {
+    "enabled": true,
+    "basePath": ".gibrun/templates",
+    "categories": {
+      "api": {
+        "description": "API endpoint templates (supports TypeScript, Go, Python, Java, Rust)",
+        "variables": ["endpointName", "handlerName", "routeName", "controllerName", "method", "path", "framework"],
+        "defaultFramework": "express"
+      },
+      "database": {
+        "description": "Database model templates",
+        "variables": ["modelName", "tableName", "fields"]
+      },
+      "test": {
+        "description": "Test file templates",
+        "variables": ["testName", "targetFile"]
+      },
+      "config": {
+        "description": "Configuration file templates",
+        "variables": ["configName", "environment"]
+      }
+    }
+  },
+  "project": {
+    "name": "gibrun-mcp-server",
+    "framework": "typescript",
+    "database": "postgresql"
+  }
+}

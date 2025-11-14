@@ -1,23 +1,4 @@
-version: '3.8'
-
 services:
-  postgres:
-    image: postgres:15-alpine
-    container_name: gibrun-postgres
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: testdb
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./test-example/schema.sql:/docker-entrypoint-initdb.d/schema.sql
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   # Optional: pgAdmin for database management
   pgadmin:
@@ -33,6 +14,95 @@ services:
     profiles:
       - admin
 
+  # Test database - separate from development
+  test-postgres:
+    image: postgres:15-alpine
+    container_name: ${TEST_CONTAINER_PREFIX:-gibrun}-test-postgres
+    environment:
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testpass
+      POSTGRES_DB: testdb
+      POSTGRES_HOST_AUTH_METHOD: trust  # Allow all connections for testing
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
+    ports:
+      - "${TEST_POSTGRES_PORT:-5434}:5432"  # Different port to avoid conflicts
+    volumes:
+      - test_postgres_data:/var/lib/postgresql/data
+      - ./test/fixtures/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    networks:
+      - test-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U testuser -h localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    profiles:
+      - test
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/run/postgresql
+
+  # HTTP Mock Server for testing HTTP operations
+  http-mock:
+    image: wiremock/wiremock:latest
+    container_name: ${TEST_CONTAINER_PREFIX:-gibrun}-http-mock
+    ports:
+      - "${TEST_HTTP_PORT:-8081}:8080"
+    volumes:
+      - ./test/fixtures/wiremock:/home/wiremock:ro  # Read-only volume
+    networks:
+      - test-network
+    command: ["--global-response-templating", "--verbose", "--disable-banner"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/__admin/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    profiles:
+      - test
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+
+  # DAP Mock Server for testing DAP operations
+  dap-mock:
+    build:
+      context: ./test/fixtures
+      dockerfile: Dockerfile.dap-mock
+    container_name: ${TEST_CONTAINER_PREFIX:-gibrun}-dap-mock
+    ports:
+      - "${TEST_DAP_PORT:-49280}:49280"
+    environment:
+      - DAP_PORT=49280
+    networks:
+      - test-network
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "49280"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    profiles:
+      - test
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+
+networks:
+  test-network:
+    driver: bridge
+    # internal: true  # Isolate from external networks
+
 volumes:
   postgres_data:
+  test_postgres_data:
 

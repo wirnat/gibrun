@@ -1,0 +1,25 @@
+export interface ${modelName} {
+  id: string;
+  ${fields}
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export class ${modelName}Model {
+  constructor(private db: any) {}
+
+  async findById(id: string): Promise<${modelName} | null> {
+    // TODO: Implement database query
+    return null;
+  }
+
+  async create(data: Omit<${modelName}, 'id' | 'createdAt' | 'updatedAt'>): Promise<${modelName}> {
+    // TODO: Implement create logic
+    return {
+      ...data,
+      id: 'generated-id',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    } as ${modelName};
+  }
+}

@@ -1,0 +1,20 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copy package files and create package-lock.json
+COPY package.json ./
+RUN npm install --package-lock-only && npm ci --only=production
+
+# Copy mock server code
+COPY dap-mock.js ./
+
+# Expose DAP port
+EXPOSE 49280
+
+# Health check
+HEALTHCHECK --interval=10s --timeout=5s --retries=5 \
+  CMD node -e "const net=require('net');const c=net.createConnection(49280,'localhost');c.on('connect',()=>c.end());c.on('error',()=>process.exit(1));"
+
+# Start mock server
+CMD ["node", "dap-mock.js"]

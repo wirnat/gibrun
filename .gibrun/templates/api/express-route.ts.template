@@ -1,0 +1,17 @@
+import { Request, Response } from 'express';
+
+export const ${endpointName}Handler = async (req: Request, res: Response) => {
+  try {
+    // TODO: Implement ${endpointName} logic
+    const result = {
+      message: '${endpointName} endpoint',
+      method: '${method}',
+      path: '${path}'
+    };
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error in ${endpointName}:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};

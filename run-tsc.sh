@@ -1,0 +1,1 @@
+cd /Users/rusli/Project/ai/mcp/gibrun && npx tsc

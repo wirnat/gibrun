@@ -13,7 +13,19 @@
         "declaration": true,
         "types": [
             "node"
-        ]
+        ],
+        "baseUrl": "./src",
+        "paths": {
+            "@/*": ["*"],
+            "@types/*": ["types/*"],
+            "@core/*": ["core/*"],
+            "@extractors/*": ["core/symbol-extractors/*"],
+            "@tools/*": ["tools/*"],
+            "@dap/*": ["tools/dap/*"],
+            "@project-analyzer/*": ["tools/project-analyzer/*"],
+            "@analyzer-types/*": ["tools/project-analyzer/types/*"],
+            "@utils/*": ["utils/*"]
+        }
     },
     "include": [
         "src/**/*"

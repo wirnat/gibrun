@@ -1,0 +1,20 @@
+package handlers
+
+import (
+    "net/http"
+    "encoding/json"
+    "github.com/gin-gonic/gin"
+)
+
+// ${handlerName}Handler handles ${method} requests to ${path}
+func ${handlerName}Handler(c *gin.Context) {
+    // TODO: Implement ${handlerName} logic
+    response := gin.H{
+        "message": "${handlerName} endpoint",
+        "method":  "${method}",
+        "path":    "${path}",
+        "status":  "success",
+    }
+
+    c.JSON(http.StatusOK, response)
+}

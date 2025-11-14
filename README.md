@@ -46,10 +46,133 @@ MCP Server untuk membantu backend programmer dalam proses end-to-end API testing
    - Works dengan VSCode Go debugger
 
 9. **dap_send_command** - Send custom DAP commands
-   - Advanced debugger control
-   - Set breakpoints programmatically
-   - Evaluate expressions
-   - Custom DAP operations
+    - Advanced debugger control
+    - Set breakpoints programmatically
+    - Evaluate expressions
+    - Custom DAP operations
+
+10. **project_analyzer/architecture** - Analyze project architecture ✅ **FULLY IMPLEMENTED**
+    - Structural health assessment with real analysis
+    - Layer identification (MVC, Clean Architecture, etc.)
+    - Dependency flow analysis and circular dependency detection
+    - Architecture pattern recognition and violations
+
+11. **project_analyzer/quality** - Code quality assessment ✅ **FULLY IMPLEMENTED**
+    - Complexity analysis (cyclomatic, cognitive) for multiple languages
+    - Code duplication detection with line-by-line analysis
+    - Test coverage integration and maintainability scoring
+    - Quality hotspots identification and recommendations
+
+12. **project_analyzer/dependencies** - Dependency analysis ✅ **FULLY IMPLEMENTED**
+    - Security vulnerability scanning and license compliance
+    - Dependency graph visualization and impact analysis
+    - Compatibility analysis and unused dependency detection
+    - Security recommendations and update suggestions
+
+13. **project_analyzer/metrics** - Development metrics ✅ **FULLY IMPLEMENTED**
+    - Productivity tracking with velocity measurements
+    - Code churn analysis and team performance insights
+    - Commit pattern analysis and development trends
+    - Cycle time and throughput metrics
+
+14. **project_analyzer/health** - Project health assessment ✅ **FULLY IMPLEMENTED**
+    - Overall health scoring across 8 dimensions
+    - Risk assessment with severity levels and mitigation
+    - Benchmark comparison and improvement roadmap
+    - Trend analysis and health predictions
+
+ 15. **project_analyzer/insights** - AI-powered insights ✅ **FULLY IMPLEMENTED**
+    - Pattern recognition (architectural, development, quality)
+    - Anomaly detection (large files, high complexity, commit patterns)
+    - Predictive recommendations and personalized guidance
+    - Knowledge discovery and development practice insights
+
+### DuckDB Tools (High-Performance Analytics Database)
+
+ 16. **index_initialize** - Initialize DuckDB project index 🆕 **NEW**
+    - Create analytical database schema for project indexing
+    - Perform initial full project scan and symbol extraction
+    - Setup performance indexes and full-text search
+
+ 17. **index_update** - Update project index incrementally 🆕 **NEW**
+    - Detect and index changed files only
+    - Maintain symbol relationships and dependencies
+    - Preserve historical metrics and trends
+
+ 18. **index_query** - Query indexed project data 🆕 **NEW**
+    - SQL-based queries on files, symbols, and metrics
+    - Advanced filtering by language, type, complexity
+    - Real-time project analytics
+
+ 19. **index_search_symbols** - Full-text symbol search 🆕 **NEW**
+    - Search functions, classes, variables by name
+    - Find symbol references and definitions
+    - Cross-file symbol relationship analysis
+
+ 20. **index_find_references** - Find symbol references 🆕 **NEW**
+    - Locate all usages of symbols across codebase
+    - Dependency chain analysis
+    - Impact assessment for refactoring
+
+ 21. **index_analytics_trends** - Time-series metrics analysis 🆕 **NEW**
+    - Code complexity trends over time
+    - Development velocity analysis
+    - Quality metrics evolution
+
+ 22. **index_analytics_correlation** - Metrics correlation analysis 🆕 **NEW**
+    - Find relationships between code metrics
+    - Identify quality and performance patterns
+    - Predictive analytics for code health
+
+ 23. **index_validate** - Validate index integrity 🆕 **NEW**
+    - Check database consistency
+    - Verify symbol relationships
+    - Detect indexing anomalies
+
+ 24. **index_cleanup** - Clean up index data 🆕 **NEW**
+    - Remove stale entries and optimize storage
+    - Rebuild performance indexes
+    - Maintain database health
+
+ 25. **cache_get_overview** - Cache system overview 🆕 **NEW**
+    - View all cache types and statistics
+    - Performance metrics and hit rates
+    - Storage utilization analysis
+
+ 26. **cache_invalidate_entries** - Invalidate cache entries 🆕 **NEW**
+    - Selective cache invalidation by pattern
+    - Force refresh of stale data
+    - Cache maintenance operations
+
+ 27. **cache_cleanup_maintenance** - Cache maintenance 🆕 **NEW**
+    - Automatic cleanup of expired entries
+    - Storage optimization and defragmentation
+    - Performance tuning
+
+ 28. **cache_analyze_performance** - Cache performance analysis 🆕 **NEW**
+    - Hit rate analysis and optimization suggestions
+    - Cost savings calculations
+    - Cache efficiency metrics
+
+ 29. **memory_store_value** - Store session memory 🆕 **NEW**
+    - Persistent cross-session memory storage
+    - Context preservation for AI interactions
+    - Memory type categorization
+
+ 30. **memory_retrieve_value** - Retrieve session memory 🆕 **NEW**
+    - Access stored memory by key
+    - Memory type filtering
+    - Salience-based retrieval
+
+ 31. **memory_find_related** - Find related memories 🆕 **NEW**
+    - Semantic memory search
+    - Context-aware memory retrieval
+    - Memory relationship analysis
+
+ 32. **duckdb_metrics** - DuckDB performance metrics 🆕 **NEW**
+    - Database statistics and performance monitoring
+    - Cache hit rates and storage metrics
+    - Prometheus-compatible metrics output
 
 ### Debugger Tools (mirror `external/mcp-go-debugger`)
 
@@ -90,6 +213,40 @@ npm install
 ```bash
 npm run build
 ```
+
+## Deployment
+
+### Production Deployment
+
+For production deployment with Docker and monitoring:
+
+```bash
+# Clone repository
+git clone https://github.com/your-org/gibrun-mcp-server.git
+cd gibrun-mcp-server
+
+# Configure environment
+cp .env.example .env.production
+# Edit .env.production with your production values
+
+# Deploy with monitoring stack
+docker-compose -f docker-compose.prod.yml --profile monitoring --env-file .env.production up -d
+
+# Or use the automated deployment script
+chmod +x scripts/deploy.sh
+ENV_FILE=.env.production ./scripts/deploy.sh
+```
+
+### Services Included
+
+- **gibrun-mcp**: Main MCP server
+- **PostgreSQL**: Database for testing
+- **Redis**: Caching layer (optional)
+- **Prometheus**: Metrics collection
+- **Grafana**: Monitoring dashboards
+- **Nginx**: Reverse proxy
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed deployment instructions.
 
 ## Konfigurasi
 
@@ -500,6 +657,48 @@ npx @modelcontextprotocol/inspector node build/index.js
 3. **Quick Iteration**: Auto-rebuild dan re-test ketika menemukan errors
 4. **Seamless Development**: Integrated dengan VSCode debugger workflow
 5. **Smart Error Handling**: AI dapat analyze errors dan propose fixes
+6. **Comprehensive Project Analysis**: 6 fully implemented analyzer tools untuk deep code insights
+7. **Real-time Intelligence**: AI-powered insights dengan pattern recognition dan anomaly detection
+
+## Project Analyzer Features ✅ **FULLY IMPLEMENTED**
+
+Semua 6 project analyzer tools telah diimplementasikan dengan algoritma analisis nyata:
+
+### Architecture Analysis
+- **Layer Detection**: Otomatis mengidentifikasi presentation, business, data, dan infrastructure layers
+- **Dependency Analysis**: Analisis dependency flow dan deteksi circular dependencies
+- **Pattern Recognition**: Deteksi pola arsitektur (MVC, Layered, Microservices)
+- **Health Scoring**: Penilaian kesehatan arsitektur dengan rekomendasi perbaikan
+
+### Code Quality Analysis
+- **Complexity Metrics**: Analisis cyclomatic dan cognitive complexity untuk multiple languages
+- **Duplication Detection**: Deteksi duplikasi kode dengan analisis line-by-line
+- **Quality Hotspots**: Identifikasi file dengan issues kritis
+- **Maintainability Scoring**: Penilaian maintainability dengan rekomendasi
+
+### Dependency Analysis
+- **Security Scanning**: Analisis kerentanan keamanan dependencies
+- **License Compliance**: Pengecekan kompatibilitas license
+- **Impact Analysis**: Analisis dampak perubahan dependencies
+- **Update Recommendations**: Saran update dengan prioritas
+
+### Development Metrics
+- **Velocity Tracking**: Pengukuran kecepatan development tim
+- **Productivity Analysis**: Analisis produktivitas dan throughput
+- **Code Churn**: Analisis perubahan kode dan stabilitas
+- **Team Insights**: Wawasan performa tim dan pola development
+
+### Health Assessment
+- **8 Dimensions**: Penilaian kesehatan across code quality, architecture, security, dll
+- **Risk Assessment**: Identifikasi risiko dengan severity levels
+- **Benchmarking**: Perbandingan dengan industry standards
+- **Improvement Roadmap**: Roadmap perbaikan dengan timeline
+
+### Intelligent Insights
+- **Pattern Recognition**: Deteksi pola development dan architectural
+- **Anomaly Detection**: Identifikasi anomali (large files, high complexity)
+- **Predictions**: Prediksi tren development dan issues potensial
+- **Personalized Recommendations**: Rekomendasi yang dipersonalisasi berdasarkan konteks
 
 ## Troubleshooting
 

@@ -7,6 +7,15 @@
             "connectionTimeoutMillis": 10000
         }
     },
+    "duckdb": {
+        "memory_limit": "256MB",
+        "threads": 4,
+        "maintenance_interval_ms": 300000,
+        "default_ttl_hours": 24,
+        "max_cache_size_mb": 256,
+        "enable_progress_bar": false,
+        "enable_object_cache": true
+    },
     "api": {
         "base_url": "http://localhost:8080",
         "timeout": 30000,
@@ -25,5 +34,12 @@
         "test_data_prefix": "test_",
         "auto_retry_on_failure": true,
         "max_retries": 3
+    },
+    "performance": {
+        "maxFunctionComplexity": 50,
+        "maxMemoryUsageMB": 100,
+        "queryTimeoutMs": 30000,
+        "fileChunkSizeKB": 64,
+        "cacheMaxSizeMB": 256
     }
 }

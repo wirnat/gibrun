@@ -1,0 +1,14 @@
+{
+  "name": "dap-mock-server",
+  "version": "1.0.0",
+  "description": "Mock DAP server for gibRun testing",
+  "main": "dap-mock.js",
+  "scripts": {
+    "start": "node dap-mock.js"
+  },
+  "dependencies": {},
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "lockfileVersion": 1
+}

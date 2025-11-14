@@ -1,0 +1,17 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/error/404"
+  },
+  "response": {
+    "status": 404,
+    "jsonBody": {
+      "error": "Resource not found",
+      "message": "The requested resource does not exist",
+      "code": "NOT_FOUND"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

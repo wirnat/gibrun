@@ -101,7 +101,12 @@ export class GibRunLSPServer {
 
 ### Incremental Analysis Engine
 
-#### Change Detection & Analysis
+#### Current Implementation Status
+- **✅ VS Code Extension**: Debounce implemented (1000ms for diagnostics)
+- **❌ Core LSP Server**: Not yet implemented (IncrementalAnalyzer class doesn't exist)
+- **📝 Specification**: Designed but requires implementation
+
+#### Change Detection & Analysis (Specification)
 ```typescript
 export class IncrementalAnalyzer {
   private changeQueue: Map<string, ChangeBatch> = new Map();
@@ -905,16 +910,19 @@ describe('LSP-MCP Integration', () => {
 - [ ] Implement basic LSP server with MCP bridge
 - [ ] Add real-time diagnostics for syntax errors
 - [ ] Create LSP client for VS Code integration
+- [ ] **Implement debounce optimization for incremental analysis**
 - [ ] Set up incremental analysis infrastructure
 
 ### Phase 2: MCP-LSP Integration (4-6 weeks)
 - [ ] Implement MCP-to-LSP data conversion
 - [ ] Add deep analysis via MCP for complex issues
+- [ ] **Add debounced cache operations for LSP state management**
 - [ ] Create code actions based on MCP results
 - [ ] Add hover information with analysis context
 
 ### Phase 3: Advanced LSP Features (4-6 weeks)
 - [ ] Implement symbol analysis and navigation
+- [ ] **Add debounced indexing for symbol updates**
 - [ ] Add workspace-wide intelligence
 - [ ] Create multi-editor client libraries
 - [ ] Optimize performance for large codebases
@@ -923,7 +931,13 @@ describe('LSP-MCP Integration', () => {
 - [ ] Add LSP clients for Vim, Emacs, Sublime
 - [ ] Create plugin marketplace integration
 - [ ] Add comprehensive testing and documentation
+- [ ] **Performance optimization with debounce monitoring**
 - [ ] Performance optimization and monitoring
+
+### Debounce Implementation Status
+- **✅ VS Code Extension**: Implemented (DiagnosticsProvider, extension.ts)
+- **❌ Core LSP Server**: Requires implementation for optimal performance
+- **📋 Priority**: High - Critical for preventing resource exhaustion
 
 ---
 

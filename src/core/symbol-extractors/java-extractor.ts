@@ -1,5 +1,5 @@
 import { LanguageSymbolExtractor } from './base.js';
-import { SymbolInfo } from '@/core/duckdb-manager.js';
+import { SymbolInfo } from '@core/duckdb-manager.js';
 
 export class JavaSymbolExtractor extends LanguageSymbolExtractor {
   extractSymbols(filePath: string, content: string): SymbolInfo[] {

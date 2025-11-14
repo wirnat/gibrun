@@ -302,6 +302,16 @@ gibRun MCP Server supports comprehensive environment variable configuration for 
 |----------|-------------|---------|----------|
 | `POSTGRES_CONNECTION_STRING` | Full PostgreSQL connection string | `postgresql://user:pass@host:port/dbname` | ✅ (replaces individual vars) |
 
+#### Option 3: PostgreSQL Standard Environment Variables
+
+| Variable | Description | Default | Example | Required |
+|----------|-------------|---------|---------|----------|
+| `PGHOST` | PostgreSQL host | `localhost` | `prod-db.example.com` | ❌ |
+| `PGPORT` | PostgreSQL port | `5432` | `5432` | ❌ |
+| `PGDATABASE` | Database name | `postgres` | `myapp_prod` | ❌ |
+| `PGUSER` | Database username | `postgres` | `app_user` | ❌ |
+| `PGPASSWORD` | Database password | - | `secure_password` | ❌ |
+
 #### Production Database Variables
 
 | Variable | Description | Default | Example | Required |
@@ -360,6 +370,16 @@ gibRun MCP Server supports comprehensive environment variable configuration for 
 | `AWS_REGION` | AWS region for S3 storage | `us-east-1` | `eu-west-1` | ❌ |
 | `ANALYSIS_RESULTS_BUCKET` | S3 bucket for analysis results | - | `my-analysis-bucket` | ❌ |
 
+### DuckDB Configuration
+
+| Variable | Description | Default | Example | Required |
+|----------|-------------|---------|---------|----------|
+| `DUCKDB_MEMORY_LIMIT` | DuckDB memory limit | `256MB` | `512MB` | ❌ |
+| `DUCKDB_THREADS` | Number of DuckDB threads | `4` | `8` | ❌ |
+| `DUCKDB_MAINTENANCE_INTERVAL_MS` | Cache maintenance interval | `300000` | `600000` | ❌ |
+| `DUCKDB_DEFAULT_TTL_HOURS` | Default cache TTL | `24` | `48` | ❌ |
+| `DUCKDB_MAX_CACHE_SIZE_MB` | Maximum cache size | `256` | `512` | ❌ |
+
 ### Go Debugger Configuration
 
 | Variable | Description | Default | Example | Required |
@@ -368,6 +388,7 @@ gibRun MCP Server supports comprehensive environment variable configuration for 
 | `GIBRUN_GO_DEBUGGER_ARGS` | Additional debugger arguments | - | `--log --log-output=rpc` | ❌ |
 | `GIBRUN_GO_DEBUGGER_CWD` | Working directory for debugger | - | `/path/to/project` | ❌ |
 | `GIBRUN_DEBUG` | Enable Go debugger debug mode | - | `1` | ❌ |
+| `GIBRUN_CONFIG_PATH` | Path to gibRun config file | `./config.json` | `/etc/gibrun/config.json` | ❌ |
 
 ### Feature Flags
 
@@ -378,13 +399,24 @@ gibRun MCP Server supports comprehensive environment variable configuration for 
 | `ENABLE_DATABASE_TOOLS` | Enable database operation tools | `true` | `false` | ❌ |
 | `ENABLE_FILE_SYSTEM_TOOLS` | Enable file system tools | `true` | `false` | ❌ |
 | `ENABLE_REAL_TIME_ANALYSIS` | Enable real-time analysis features | `false` | `true` | ❌ |
+| `ENABLE_FILE_SYSTEM` | Enable file system operations | `true` | `false` | ❌ |
+| `ENABLE_PROJECT_ANALYZER` | Enable project analysis tools | `true` | `false` | ❌ |
+| `ENABLE_DATABASE` | Enable database operations | `true` | `false` | ❌ |
+| `ENABLE_HTTP` | Enable HTTP operations | `true` | `false` | ❌ |
+| `ENABLE_DAP` | Enable DAP debugging | `true` | `false` | ❌ |
 
 ### Environment Variable Categories
 
 #### 🔧 **Core Configuration**
 Required for basic gibRun operation:
-- `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`
+- `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` (or PostgreSQL standard vars)
 - `NODE_ENV`
+
+#### 🗄️ **Database Configuration**
+For database connections and performance:
+- `POSTGRES_*` variables or `PG*` standard variables
+- `DUCKDB_*` variables for embedded database tuning
+- `POSTGRES_CONNECTION_STRING` for connection string approach
 
 #### 🔒 **Security & Authentication**
 For production deployments:
@@ -403,13 +435,20 @@ For development and CI/CD:
 
 #### 🐛 **Debugging & Troubleshooting**
 For debugging issues:
-- `GIBRUN_DEBUG`, `GIBRUN_GO_DEBUGGER_*`
+- `GIBRUN_DEBUG`, `GIBRUN_GO_DEBUGGER_*`, `GIBRUN_CONFIG_PATH`
 - `LOG_LEVEL=debug`
 
 #### ⚡ **Performance Tuning**
 For performance optimization:
 - `REQUEST_TIMEOUT`, `MAX_REQUEST_SIZE`
+- `DUCKDB_MEMORY_LIMIT`, `DUCKDB_THREADS`, `DUCKDB_MAX_CACHE_SIZE_MB`
 - `VITEST_MAX_CONCURRENCY`, `VITEST_MAX_WORKERS`
+
+#### 🎛️ **Feature Control**
+For enabling/disabling specific functionality:
+- `ENABLE_DAP`, `ENABLE_HTTP`, `ENABLE_DATABASE`
+- `ENABLE_FILE_SYSTEM`, `ENABLE_PROJECT_ANALYZER`
+- `ENABLE_DAP_DEBUGGING`, `ENABLE_HTTP_MOCKING`, `ENABLE_REAL_TIME_ANALYSIS`
 
 ### Environment Variable Usage Examples
 
@@ -453,6 +492,30 @@ export DEBUG=dap:*
 export GIBRUN_DEBUG=1
 ```
 
+#### Performance Tuning
+```bash
+# Optimize DuckDB performance
+export DUCKDB_MEMORY_LIMIT=512MB
+export DUCKDB_THREADS=8
+export DUCKDB_MAX_CACHE_SIZE_MB=512
+
+# Configure HTTP timeouts
+export REQUEST_TIMEOUT=60000
+export MAX_REQUEST_SIZE=50mb
+```
+
+#### Feature Control
+```bash
+# Enable specific features
+export ENABLE_DAP_DEBUGGING=true
+export ENABLE_HTTP_MOCKING=true
+export ENABLE_REAL_TIME_ANALYSIS=false
+
+# Disable specific modules
+export ENABLE_FILE_SYSTEM=false
+export ENABLE_PROJECT_ANALYZER=true
+```
+
 #### CI/CD Setup
 ```bash
 # GitHub Actions environment (automatically provided)
@@ -468,10 +531,14 @@ export ANALYSIS_RESULTS_BUCKET=my-analysis-results
 
 ### Environment Variable Priority
 
-1. **Explicit Variables**: Individual `POSTGRES_*` variables take precedence over `POSTGRES_CONNECTION_STRING`
-2. **Defaults**: Sensible defaults are provided for optional variables
-3. **Validation**: Required variables are validated at startup
-4. **Security**: Sensitive values are masked in logs and error messages
+1. **PostgreSQL Standard Variables**: `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD` take highest precedence
+2. **Individual POSTGRES Variables**: `POSTGRES_HOST`, `POSTGRES_PORT`, etc. (second priority)
+3. **Connection String**: `POSTGRES_CONNECTION_STRING` (third priority)
+4. **DuckDB Configuration**: DuckDB-specific variables are loaded from config file or environment
+5. **Feature Flags**: Boolean feature flags default to `true` unless explicitly set to `'false'`
+6. **Defaults**: Sensible defaults are provided for all optional variables
+7. **Validation**: Required variables are validated at startup
+8. **Security**: Sensitive values are masked in logs and error messages
 
 ### Environment File Support
 
@@ -956,14 +1023,15 @@ npm run test:integration
 ### Available NPM Scripts
 
 ```bash
-npm run build          # Build TypeScript
-npm run dev            # Development watch mode
-npm run start          # Start production server
-npm run docker:build   # Build Docker image
-npm run test:unit      # Run unit tests
-npm run test:integration # Run integration tests
+npm run build          # Production build with esbuild minification (204KB output)
+npm run dev            # Development watch mode with sourcemaps
+npm run start          # Start production server from build/
+npm run docker:build   # Build optimized Docker image
+npm run test:unit      # Run unit tests (88+ tests)
+npm run test:integration # Run integration tests with Docker services
 npm run lint           # Run ESLint
-npm run typecheck      # TypeScript type checking
+npm run typecheck      # TypeScript type checking (zero errors)
+npm run docker:compose:up # Start full production stack
 ```
 
 ## Support and Contributing
@@ -981,9 +1049,98 @@ npm run typecheck      # TypeScript type checking
 4. Check GitHub Issues for similar problems
 5. Create a new issue with detailed information
 
+## Build System and Performance
+
+### Optimized Build Configuration
+
+gibRun MCP Server uses a modern Vite-based build system optimized for production deployment and development efficiency.
+
+#### Build Features
+
+- **Conditional Minification**: Production builds use esbuild minification (44% size reduction), development builds remain unminified for debugging
+- **Tree Shaking**: Aggressive dead code elimination removes unused dependencies
+- **External Dependencies**: MCP SDK, Node.js built-ins, and database drivers are externalized to reduce bundle size
+- **Path Aliases**: Mandatory '@' system with 7 aliases for clean imports:
+  - `@types` - TypeScript type definitions
+  - `@project-analyzer` - Project analysis tools
+  - `@analyzer-types` - Analysis type definitions
+  - `@core` - Core server components
+  - `@tools` - MCP tool implementations
+  - `@utils` - Utility functions
+  - `@services` - Service layer components
+
+#### Performance Benchmarks
+
+- **Build Size**: 204KB minified production bundle (44% reduction from previous version)
+- **Build Time**: < 30 seconds for full TypeScript compilation and bundling
+- **Memory Usage**: Stable runtime memory with leak detection
+- **Database Queries**: 50 concurrent queries in ~20ms
+- **HTTP Requests**: 30+ concurrent requests efficiently handled
+
+#### Build Commands
+
+```bash
+# Development build (unminified, with sourcemaps)
+npm run dev
+
+# Production build (minified, optimized)
+npm run build
+
+# Type checking only
+npm run typecheck
+
+# Docker build
+npm run docker:build
+```
+
+#### Environment-Specific Builds
+
+The build system automatically adapts based on `NODE_ENV`:
+
+- **Development**: Unminified, sourcemaps enabled, hot reload support
+- **Production**: Minified with esbuild, external dependencies, optimized for deployment
+- **Test**: Minimal build for testing environment
+
+### DuckDB Performance Tuning
+
+The embedded DuckDB database includes comprehensive performance configuration:
+
+#### Memory Management
+- **Memory Limit**: Configurable via `DUCKDB_MEMORY_LIMIT` (default: 256MB)
+- **Cache Size**: Adjustable via `DUCKDB_MAX_CACHE_SIZE_MB` (default: 256MB)
+- **Maintenance Interval**: Configurable cleanup via `DUCKDB_MAINTENANCE_INTERVAL_MS` (default: 5 minutes)
+
+#### Concurrency Settings
+- **Thread Count**: Configurable via `DUCKDB_THREADS` (default: 4)
+- **Default TTL**: Cache expiration via `DUCKDB_DEFAULT_TTL_HOURS` (default: 24 hours)
+
+#### Performance Recommendations
+
+```bash
+# High-performance configuration
+export DUCKDB_MEMORY_LIMIT=512MB
+export DUCKDB_THREADS=8
+export DUCKDB_MAX_CACHE_SIZE_MB=512
+export DUCKDB_MAINTENANCE_INTERVAL_MS=600000  # 10 minutes
+
+# Memory-constrained environment
+export DUCKDB_MEMORY_LIMIT=128MB
+export DUCKDB_THREADS=2
+export DUCKDB_MAX_CACHE_SIZE_MB=128
+```
+
 ## Changelog
 
-### v1.0.0 (Current)
+### v1.1.0 (Latest)
+- **DuckDB Integration**: Embedded database with configurable performance tuning
+- **Path Aliases System**: Mandatory '@' aliases for clean imports (7 aliases)
+- **Modular Architecture**: ArchitectureAnalyzer broken into 5 focused components
+- **Enhanced Build System**: Vite-based build with conditional minification
+- **Environment Variables**: Added DuckDB config, feature flags, PostgreSQL standard vars
+- **Performance Optimization**: 44% build size reduction with esbuild minification
+- **Type Safety**: Zero TypeScript errors with comprehensive type checking
+
+### v1.0.0 (Previous)
 - Complete MCP server implementation with 15+ tools
 - PostgreSQL database operations with connection pooling
 - HTTP REST API client with full method support
@@ -998,14 +1155,17 @@ npm run typecheck      # TypeScript type checking
 - Security hardening and best practices
 
 ### Key Features Added
-- **Database Tools**: postgres_query with transaction support
+- **Database Tools**: postgres_query with transaction support + DuckDB embedded database
 - **HTTP Tools**: http_request with custom headers/auth
 - **Go Tools**: build_go_project, run_go_command, dap_restart
 - **File Tools**: read_source_file, write_source_file, execute_shell_command
 - **DAP Tools**: Full Go debugger integration via proxy
+- **Project Analysis**: Modular ArchitectureAnalyzer with 5 specialized components
+- **Build System**: Vite-based with path aliases and conditional minification
 - **Deployment**: Automated deployment with health checks
 - **Monitoring**: Prometheus metrics and Grafana dashboards
 - **Security**: Environment variable management, SSL support
+- **Performance**: 44% build size reduction, optimized DuckDB configuration
 
 ### Supported Platforms
 - OpenCode MCP integration

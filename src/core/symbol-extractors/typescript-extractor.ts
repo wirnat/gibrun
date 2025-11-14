@@ -1,5 +1,5 @@
 import * as path from 'path';
-import { SymbolInfo } from '@/core/duckdb-manager.js';
+import { SymbolInfo } from '@core/duckdb-manager.js';
 import { LanguageSymbolExtractor } from './base.js';
 
 // TypeScript/JavaScript Symbol Extractor

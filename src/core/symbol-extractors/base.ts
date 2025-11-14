@@ -1,4 +1,4 @@
-import { SymbolInfo } from '@/core/duckdb-manager.js';
+import { SymbolInfo } from '@core/duckdb-manager.js';
 
 export interface SymbolExtractionResult {
   symbols: SymbolInfo[];

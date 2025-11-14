@@ -1,7 +1,7 @@
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { DAPService } from "@/services/dap-service.js";
-import { resolveDAPServer } from "@/core/dap-handlers.js";
-import { DAPEvent, DAPEventListenerOptions } from "@/types/server.js";
+import { resolveDAPServer } from "@core/dap-handlers.js";
+import { DAPEvent, DAPEventListenerOptions } from "@types/server.js";
 
 // Event handling tools for DAP
 

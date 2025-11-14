@@ -1,6 +1,6 @@
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { DAPService } from "@/services/dap-service.js";
-import { resolveDAPServer } from "@/core/dap-handlers.js";
+import { resolveDAPServer } from "@core/dap-handlers.js";
 
 // Breakpoint management tools for DAP
 

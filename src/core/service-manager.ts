@@ -2,7 +2,7 @@ import { DuckDBManager } from './duckdb-manager.js';
 import { DuckDBCacheManager } from './duckdb-cache-manager.js';
 import { DatabaseService } from '@/services/database-service.js';
 import { HttpService } from '@/services/http-service.js';
-import { ProjectAnalyzerTool } from '@/tools/project-analyzer/index.js';
+import { ProjectAnalyzerTool } from '@tools/project-analyzer/index.js';
 import { ConfigManager } from './config-manager.js';
 import { MaintenanceTimerManager } from './maintenance-timer-manager.js';
 

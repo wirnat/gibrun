@@ -1,6 +1,6 @@
-import { DuckDBManager, SymbolInfo } from '@/core/duckdb-manager.js';
+import { DuckDBManager, SymbolInfo } from '@core/duckdb-manager.js';
 import { logInfo, logError } from '@/services/logger-service.js';
-import { promisifyRun, promisifyAll, promisifyGet } from '@/utils/duckdb-promisify.js';
+import { promisifyRun, promisifyAll, promisifyGet } from '@utils/duckdb-promisify.js';
 
 export interface SymbolSearchQuery {
   searchTerm?: string;

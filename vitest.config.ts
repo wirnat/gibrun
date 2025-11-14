@@ -40,7 +40,15 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': resolve(__dirname, './src')
+      '@': resolve(__dirname, './src'),
+      '@types': resolve(__dirname, './src/types'),
+      '@core': resolve(__dirname, './src/core'),
+      '@extractors': resolve(__dirname, './src/core/symbol-extractors'),
+      '@tools': resolve(__dirname, './src/tools'),
+      '@dap': resolve(__dirname, './src/tools/dap'),
+      '@project-analyzer': resolve(__dirname, './src/tools/project-analyzer'),
+      '@analyzer-types': resolve(__dirname, './src/tools/project-analyzer/types'),
+      '@utils': resolve(__dirname, './src/utils')
     }
   }
 })

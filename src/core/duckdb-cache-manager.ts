@@ -2,8 +2,8 @@ import * as path from 'path';
 import * as fs from 'fs/promises';
 import Database from 'duckdb';
 import { logInfo, logError } from '@/services/logger-service.js';
-import { CacheConfig } from '@/types/cache.js';
-import { promisifyRun, promisifyAll, promisifyGet } from '@/utils/duckdb-promisify.js';
+import { CacheConfig } from '@types/cache.js';
+import { promisifyRun, promisifyAll, promisifyGet } from '@utils/duckdb-promisify.js';
 
 interface LoggerService {
   info(message: string, meta?: any): void;

@@ -1,6 +1,6 @@
 import Database from 'duckdb';
 import { FileInfo } from './duckdb-manager.js';
-import { promisifyRun, promisifyAll, promisifyGet } from '@/utils/duckdb-promisify.js';
+import { promisifyRun, promisifyAll, promisifyGet } from '@utils/duckdb-promisify.js';
 
 interface LoggerService {
   info(message: string, meta?: any): void;

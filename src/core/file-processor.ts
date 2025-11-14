@@ -2,9 +2,9 @@ import * as fs from 'fs/promises';
 import * as fsSync from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
-import { DuckDBManager, FileInfo } from '@/core/duckdb-manager.js';
+import { DuckDBManager, FileInfo } from '@core/duckdb-manager.js';
 import { logInfo, logError } from '@/services/logger-service.js';
-import { promisifyRun, promisifyAll, promisifyGet } from '@/utils/duckdb-promisify.js';
+import { promisifyRun, promisifyAll, promisifyGet } from '@utils/duckdb-promisify.js';
 
 export interface FileProcessingOptions {
   forceReprocess?: boolean;

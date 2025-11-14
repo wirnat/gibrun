@@ -10,8 +10,8 @@ export const ENABLE_DAP = process.env.ENABLE_DAP !== 'false'; // Default true
 
 // Tool loaders - dynamic imports for lazy loading
 const toolLoaders: Record<string, () => Promise<any>> = {
-  fileSystem: () => import("@/tools/file-system/index.js"),
-  projectAnalyzer: () => import("@/tools/project-analyzer/index.js"),
+  fileSystem: () => import("@tools/file-system/index.js"),
+  projectAnalyzer: () => import("@tools/project-analyzer/index.js"),
   dap: () => import("@/services/dap-service.js"),
 };
 
@@ -34,7 +34,7 @@ export async function getService(name: string): Promise<any> {
         break;
       case 'projectAnalyzer':
         if (!ENABLE_PROJECT_ANALYZER) throw new Error('Project analyzer is disabled');
-        const { ProjectAnalyzerTool } = await import("@/tools/project-analyzer/index.js");
+        const { ProjectAnalyzerTool } = await import("@tools/project-analyzer/index.js");
         services.set(name, new ProjectAnalyzerTool());
         break;
       case 'dap':

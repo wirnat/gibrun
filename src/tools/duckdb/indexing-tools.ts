@@ -1,11 +1,11 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
-import { DuckDBManager } from '@/core/duckdb-manager.js';
-import { SymbolSearchEngine } from '@/core/symbol-search-engine.js';
-import { AnalyticsEngine } from '@/core/analytics-engine.js';
-import { IncrementalUpdater } from '@/core/incremental-updater.js';
-import { SymbolExtractor } from '@/core/symbol-extractor.js';
+import { DuckDBManager } from '@core/duckdb-manager.js';
+import { SymbolSearchEngine } from '@core/symbol-search-engine.js';
+import { AnalyticsEngine } from '@core/analytics-engine.js';
+import { IncrementalUpdater } from '@core/incremental-updater.js';
+import { SymbolExtractor } from '@core/symbol-extractor.js';
 import { logError, logInfo } from '@/services/logger-service.js';
-import { promisifyRun, promisifyAll, promisifyGet } from '@/utils/duckdb-promisify.js';
+import { promisifyRun, promisifyAll, promisifyGet } from '@utils/duckdb-promisify.js';
 
 // Tool definitions for DuckDB indexing operations
 export const INDEXING_TOOLS: Tool[] = [

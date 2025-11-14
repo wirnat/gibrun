@@ -1,6 +1,6 @@
-import { DuckDBManager } from '@/core/duckdb-manager.js';
+import { DuckDBManager } from '@core/duckdb-manager.js';
 import { logInfo, logError } from '@/services/logger-service.js';
-import { promisifyRun, promisifyAll, promisifyGet } from '@/utils/duckdb-promisify.js';
+import { promisifyRun, promisifyAll, promisifyGet } from '@utils/duckdb-promisify.js';
 
 export interface PerformanceStats {
   table_stats: Array<{

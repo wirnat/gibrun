@@ -1,9 +1,9 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { DuckDBManager, FileInfo, SymbolInfo, DependencyInfo } from '@/core/duckdb-manager.js';
-import { SymbolExtractor, SymbolExtractionResult } from '@/core/symbol-extractor.js';
+import { DuckDBManager, FileInfo, SymbolInfo, DependencyInfo } from '@core/duckdb-manager.js';
+import { SymbolExtractor, SymbolExtractionResult } from '@core/symbol-extractor.js';
 import { logInfo, logError } from '@/services/logger-service.js';
-import { promisifyRun, promisifyAll, promisifyGet } from '@/utils/duckdb-promisify.js';
+import { promisifyRun, promisifyAll, promisifyGet } from '@utils/duckdb-promisify.js';
 
 export interface ChangeDetectionResult {
   changedFiles: string[];

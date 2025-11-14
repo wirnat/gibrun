@@ -1,7 +1,7 @@
 import { logInfo, logError } from '@/services/logger-service.js';
-import { DuckDBCacheManager } from '@/core/duckdb-cache-manager.js';
-import { InvalidationResult } from '@/types/cache.js';
-import { promisifyRun, promisifyAll, promisifyGet } from '@/utils/duckdb-promisify.js';
+import { DuckDBCacheManager } from '@core/duckdb-cache-manager.js';
+import { InvalidationResult } from '@types/cache.js';
+import { promisifyRun, promisifyAll, promisifyGet } from '@utils/duckdb-promisify.js';
 
 interface LoggerService {
   info(message: string, meta?: any): void;

@@ -18,10 +18,12 @@
         "paths": {
             "@/*": ["*"],
             "@types/*": ["types/*"],
+            "@core/*": ["core/*"],
+            "@extractors/*": ["core/symbol-extractors/*"],
+            "@tools/*": ["tools/*"],
+            "@dap/*": ["tools/dap/*"],
             "@project-analyzer/*": ["tools/project-analyzer/*"],
             "@analyzer-types/*": ["tools/project-analyzer/types/*"],
-            "@core/*": ["core/*"],
-            "@tools/*": ["tools/*"],
             "@utils/*": ["utils/*"]
         }
     },

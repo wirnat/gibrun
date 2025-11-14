@@ -1,8 +1,8 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
-import { DuckDBCacheManager } from '@/core/duckdb-cache-manager.js';
-import { CacheConfig } from '@/types/cache.js';
+import { DuckDBCacheManager } from '@core/duckdb-cache-manager.js';
+import { CacheConfig } from '@types/cache.js';
 import { logError, logInfo } from '@/services/logger-service.js';
-import { promisifyRun, promisifyAll, promisifyGet } from '@/utils/duckdb-promisify.js';
+import { promisifyRun, promisifyAll, promisifyGet } from '@utils/duckdb-promisify.js';
 
 // Default cache configuration
 const DEFAULT_CACHE_CONFIG: CacheConfig = {

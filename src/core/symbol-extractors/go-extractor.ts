@@ -1,4 +1,4 @@
-import { SymbolInfo } from '@/core/duckdb-manager.js';
+import { SymbolInfo } from '@core/duckdb-manager.js';
 import { LanguageSymbolExtractor } from './base.js';
 
 // Go Symbol Extractor

@@ -1,6 +1,6 @@
 import * as path from 'path';
-import { DuckDBManager, MetricData } from '@/core/duckdb-manager.js';
-import { SymbolExtractor, SymbolExtractionResult } from '@/core/symbol-extractor.js';
+import { DuckDBManager, MetricData } from '@core/duckdb-manager.js';
+import { SymbolExtractor, SymbolExtractionResult } from '@core/symbol-extractor.js';
 import { logInfo, logError } from '@/services/logger-service.js';
 
 export interface MetricsCalculationOptions {

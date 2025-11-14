@@ -12,7 +12,7 @@ import axios, { Method, RawAxiosRequestConfig } from "axios";
 import { exec } from "child_process";
 import { promisify } from "util";
 import { readFile, writeFile } from "fs/promises";
-import { existsSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import * as net from "net";
 import * as path from "path";
 
@@ -20,16 +20,155 @@ import { GoDebuggerProxy } from "@/services/dap-service.js";
 import { logError, logInfo } from "@/services/logger-service.js";
 import { DatabaseService } from "@/services/database-service.js";
 import { HttpService } from "@/services/http-service.js";
+import { DuckDBManager } from "@/core/duckdb-manager.js";
+import { DuckDBCacheManager } from "@/core/duckdb-cache-manager.js";
+import { CacheConfig } from "@/types/cache.js";
 import { FILE_SYSTEM_TOOLS, handleMultiFileReader, handleMultiFileEditor, handleProjectFileManager, handleFileTemplateManager } from "@/tools/file-system/index.js";
 import { ProjectAnalyzerTool } from "@/tools/project-analyzer/index.js";
+import { DUCKDB_TOOLS, handleIndexInitialize, handleIndexUpdate, handleIndexQuery, handleIndexSearchSymbols, handleIndexFindReferences, handleIndexAnalyticsTrends, handleIndexAnalyticsCorrelation, handleIndexValidate, handleIndexCleanup, handleCacheGetOverview, handleCacheInvalidateEntries, handleCacheCleanupMaintenance, handleCacheAnalyzePerformance, handleMemoryStoreValue, handleMemoryRetrieveValue, handleMemoryFindRelated } from "@/tools/duckdb/index.js";
+import { handleDAPRestart, handleDAPSendCommand } from "@/core/dap-handlers.js";
 
 const execAsync = promisify(exec);
 const goDebuggerProxy = new GoDebuggerProxy(process.cwd());
+
+// Load configuration
+function loadConfig(): any {
+    try {
+        const configPath = process.env.GIBRUN_CONFIG_PATH || './config.json';
+        if (existsSync(configPath)) {
+            const configData = readFileSync(configPath, 'utf-8');
+            return JSON.parse(configData);
+        }
+    } catch (error) {
+        logInfo('No configuration file found, using defaults');
+    }
+    return {};
+}
+
+const config = loadConfig();
+
+// DuckDB configuration
+const duckdbConfig = config.duckdb || {};
+const defaultDuckDBConfig = {
+    memoryLimit: duckdbConfig.memory_limit || process.env.DUCKDB_MEMORY_LIMIT || '256MB',
+    threads: parseInt(duckdbConfig.threads?.toString() || process.env.DUCKDB_THREADS || '4'),
+    maintenanceIntervalMs: parseInt(duckdbConfig.maintenance_interval_ms?.toString() || process.env.DUCKDB_MAINTENANCE_INTERVAL_MS || '300000'),
+    defaultTtlHours: parseInt(duckdbConfig.default_ttl_hours?.toString() || process.env.DUCKDB_DEFAULT_TTL_HOURS || '24'),
+    maxCacheSizeMb: parseInt(duckdbConfig.max_cache_size_mb?.toString() || process.env.DUCKDB_MAX_CACHE_SIZE_MB || '256')
+};
 
 // Service instances
 const databaseService = new DatabaseService();
 const httpService = new HttpService();
 const projectAnalyzerTool = new ProjectAnalyzerTool();
+
+// DuckDB service instances (lazy initialized)
+let duckdbManager: DuckDBManager | null = null;
+let duckdbCacheManager: DuckDBCacheManager | null = null;
+
+// Maintenance timer manager to prevent memory leaks
+class MaintenanceTimerManager {
+    private timer: NodeJS.Timeout | null = null;
+    private intervalMs: number;
+
+    constructor(intervalMs: number) {
+        this.intervalMs = intervalMs;
+    }
+
+    start(callback: () => void): void {
+        this.stop(); // Clear any existing timer
+        this.timer = setInterval(callback, this.intervalMs);
+    }
+
+    stop(): void {
+        if (this.timer) {
+            clearInterval(this.timer);
+            this.timer = null;
+        }
+    }
+
+    isRunning(): boolean {
+        return this.timer !== null;
+    }
+}
+
+function getDuckDBManager(): DuckDBManager {
+    if (!duckdbManager) {
+        duckdbManager = new DuckDBManager(process.cwd());
+        logInfo('DuckDB Manager initialized');
+    }
+    return duckdbManager;
+}
+
+function getDuckDBCacheManager(): DuckDBCacheManager {
+    if (!duckdbCacheManager) {
+        duckdbCacheManager = new DuckDBCacheManager(process.cwd(), defaultDuckDBConfig);
+        logInfo('DuckDB Cache Manager initialized');
+    }
+    return duckdbCacheManager;
+}
+
+// Metrics collection for monitoring
+async function collectDuckDBMetrics(): Promise<string> {
+    const metrics: string[] = [];
+    const timestamp = Math.floor(Date.now() / 1000);
+
+    try {
+        // DuckDB Manager metrics
+        if (duckdbManager && duckdbManager.isInitialized()) {
+            const stats = await duckdbManager.getStatistics();
+            metrics.push(`# HELP duckdb_files_total Total number of files indexed`);
+            metrics.push(`# TYPE duckdb_files_total gauge`);
+            metrics.push(`duckdb_files_total ${stats.tables.find((t: any) => t.table_name === 'files')?.count || 0} ${timestamp}`);
+
+            metrics.push(`# HELP duckdb_symbols_total Total number of symbols indexed`);
+            metrics.push(`# TYPE duckdb_symbols_total gauge`);
+            metrics.push(`duckdb_symbols_total ${stats.tables.find((t: any) => t.table_name === 'symbols')?.count || 0} ${timestamp}`);
+
+            metrics.push(`# HELP duckdb_metrics_total Total number of metrics recorded`);
+            metrics.push(`# TYPE duckdb_metrics_total gauge`);
+            metrics.push(`duckdb_metrics_total ${stats.tables.find((t: any) => t.table_name === 'metrics')?.count || 0} ${timestamp}`);
+
+            metrics.push(`# HELP duckdb_database_size_bytes Size of DuckDB database in bytes`);
+            metrics.push(`# TYPE duckdb_database_size_bytes gauge`);
+            metrics.push(`duckdb_database_size_bytes ${stats.database_size_bytes || 0} ${timestamp}`);
+        }
+
+        // DuckDB Cache Manager metrics
+        if (duckdbCacheManager && duckdbCacheManager.isInitialized()) {
+            const cacheConfig = duckdbCacheManager.getConfig();
+            metrics.push(`# HELP duckdb_cache_memory_limit_bytes Memory limit for DuckDB cache`);
+            metrics.push(`# TYPE duckdb_cache_memory_limit_bytes gauge`);
+            const memoryLimitBytes = parseMemoryLimit(cacheConfig.memoryLimit);
+            metrics.push(`duckdb_cache_memory_limit_bytes ${memoryLimitBytes} ${timestamp}`);
+
+            metrics.push(`# HELP duckdb_cache_threads Number of threads for DuckDB cache`);
+            metrics.push(`# TYPE duckdb_cache_threads gauge`);
+            metrics.push(`duckdb_cache_threads ${cacheConfig.threads} ${timestamp}`);
+        }
+
+    } catch (error) {
+        logError('Failed to collect DuckDB metrics', error);
+    }
+
+    return metrics.join('\n');
+}
+
+function parseMemoryLimit(limit: string): number {
+    const match = limit.match(/^(\d+)([KMGT]?)B?$/i);
+    if (!match) return 256 * 1024 * 1024; // Default 256MB
+
+    const value = parseInt(match[1]);
+    const unit = match[2].toUpperCase();
+
+    switch (unit) {
+        case 'K': return value * 1024;
+        case 'M': return value * 1024 * 1024;
+        case 'G': return value * 1024 * 1024 * 1024;
+        case 'T': return value * 1024 * 1024 * 1024 * 1024;
+        default: return value;
+    }
+}
 
 // PostgreSQL connection pools - LEGACY: will be removed after migration
 const dbPools = new Map<string, Pool>();
@@ -38,6 +177,7 @@ const dbPools = new Map<string, Pool>();
 const LOCAL_TOOLS: Tool[] = [
     ...FILE_SYSTEM_TOOLS,
     ...projectAnalyzerTool.getTools(),
+    ...DUCKDB_TOOLS,
     {
         name: "postgres_query",
         description:
@@ -253,6 +393,23 @@ const LOCAL_TOOLS: Tool[] = [
             required: ["command"],
         },
     },
+    {
+        name: "duckdb_metrics",
+        description:
+            "Get DuckDB performance metrics and statistics. Returns database size, table counts, cache statistics, and performance metrics in Prometheus format.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                format: {
+                    type: "string",
+                    enum: ["prometheus", "json"],
+                    description: "Output format for metrics",
+                    default: "json",
+                },
+            },
+            required: [],
+        },
+    },
 ];
 
 type ToolHandler = (args: any) => Promise<any>;
@@ -277,6 +434,27 @@ const LOCAL_TOOL_HANDLERS: Record<string, ToolHandler> = {
     "project_analyzer/metrics": (args: any) => projectAnalyzerTool.executeTool("project_analyzer/metrics", args),
     "project_analyzer/health": (args: any) => projectAnalyzerTool.executeTool("project_analyzer/health", args),
     "project_analyzer/insights": (args: any) => projectAnalyzerTool.executeTool("project_analyzer/insights", args),
+
+    // DuckDB indexing tools
+    index_initialize: handleIndexInitialize,
+    index_update: handleIndexUpdate,
+    index_query: handleIndexQuery,
+    index_search_symbols: handleIndexSearchSymbols,
+    index_find_references: handleIndexFindReferences,
+    index_analytics_trends: handleIndexAnalyticsTrends,
+    index_analytics_correlation: handleIndexAnalyticsCorrelation,
+    index_validate: handleIndexValidate,
+    index_cleanup: handleIndexCleanup,
+
+    // DuckDB cache tools
+    cache_get_overview: handleCacheGetOverview,
+    cache_invalidate_entries: handleCacheInvalidateEntries,
+    cache_cleanup_maintenance: handleCacheCleanupMaintenance,
+    cache_analyze_performance: handleCacheAnalyzePerformance,
+    memory_store_value: handleMemoryStoreValue,
+    memory_retrieve_value: handleMemoryRetrieveValue,
+    memory_find_related: handleMemoryFindRelated,
+    duckdb_metrics: handleDuckDBMetrics,
 };
 
 function mergeToolLists(primary: Tool[], secondary: Tool[]): Tool[] {
@@ -297,19 +475,27 @@ function createErrorResult(message: string, meta?: Record<string, unknown>) {
         content: [
             {
                 type: "text",
-                text: JSON.stringify(
+                text: safeJsonStringify(
                     {
                         success: false,
                         error: message,
                         ...(meta ?? {}),
                     },
-                    null,
-                    2
+                    1024 * 1024 // 1MB limit
                 ),
             },
         ],
         isError: true,
     };
+}
+
+// Safe JSON stringify with size limits
+function safeJsonStringify(obj: any, maxSize: number = 1024 * 1024): string {
+    const str = JSON.stringify(obj, null, 2);
+    if (str.length > maxSize) {
+        throw new Error(`Object too large: ${str.length} bytes > ${maxSize} limit`);
+    }
+    return str;
 }
 
 // Get or create PostgreSQL pool
@@ -918,6 +1104,129 @@ const DEFAULT_DAP_INITIALIZE_ARGS: Record<string, unknown> = {
 };
 const DEFAULT_CONFIGURATION_DONE_TIMEOUT_MS = 750;
 
+// DAP Connection State Management
+class DAPConnectionState {
+    private awaitingInitializeResponse: boolean;
+    private awaitingInitializedEvent: boolean;
+    private configurationDoneSent: boolean;
+    private commandSent: boolean;
+    private resolved: boolean;
+    private configurationDoneTimer: NodeJS.Timeout | null = null;
+
+    constructor(options: SendDAPRequestOptions, shouldInitialize: boolean, shouldSendConfigurationDone: boolean) {
+        this.awaitingInitializeResponse = shouldInitialize;
+        this.awaitingInitializedEvent = shouldSendConfigurationDone && (options?.waitForInitializedEvent ?? true);
+        this.configurationDoneSent = !shouldSendConfigurationDone;
+        this.commandSent = false;
+        this.resolved = false;
+    }
+
+    isReadyForPrimaryCommand(): boolean {
+        return !this.awaitingInitializeResponse && this.configurationDoneSent && !this.commandSent;
+    }
+
+    markInitializeResponseReceived(): void {
+        this.awaitingInitializeResponse = false;
+    }
+
+    markConfigurationDoneSent(): void {
+        this.configurationDoneSent = true;
+        this.awaitingInitializedEvent = false;
+        this.clearConfigurationDoneTimer();
+    }
+
+    markCommandSent(): void {
+        this.commandSent = true;
+    }
+
+    markResolved(): void {
+        this.resolved = true;
+    }
+
+    isResolved(): boolean {
+        return this.resolved;
+    }
+
+    shouldWaitForInitializedEvent(): boolean {
+        return this.awaitingInitializedEvent;
+    }
+
+    scheduleConfigurationDoneFallback(sendConfigurationDone: () => void, timeoutMs: number): void {
+        if (!this.awaitingInitializedEvent || this.configurationDoneTimer) {
+            return;
+        }
+        this.configurationDoneTimer = setTimeout(() => {
+            this.configurationDoneTimer = null;
+            sendConfigurationDone();
+        }, timeoutMs);
+    }
+
+    clearConfigurationDoneTimer(): void {
+        if (this.configurationDoneTimer) {
+            clearTimeout(this.configurationDoneTimer);
+            this.configurationDoneTimer = null;
+        }
+    }
+}
+
+// DAP Message Handling
+class DAPMessageHandler {
+    private buffer = "";
+    private sequenceNumber = 1;
+
+    sendMessage(client: net.Socket, command: string, args?: any): void {
+        const request = {
+            seq: this.sequenceNumber++,
+            type: "request",
+            command,
+            arguments: args || {},
+        };
+
+        const requestStr = JSON.stringify(request);
+        const contentLength = Buffer.byteLength(requestStr, "utf8");
+        const message = `Content-Length: ${contentLength}\r\n\r\n${requestStr}`;
+        client.write(message);
+    }
+
+    processData(data: Buffer, onMessage: (message: any) => void): void {
+        this.buffer += data.toString();
+
+        while (this.parseNextMessage(onMessage)) {
+            // Continue parsing all available messages
+        }
+    }
+
+    private parseNextMessage(onMessage: (message: any) => void): boolean {
+        const headerEndIndex = this.buffer.indexOf("\r\n\r\n");
+        if (headerEndIndex === -1) return false;
+
+        const headerPart = this.buffer.substring(0, headerEndIndex);
+        const contentLengthMatch = headerPart.match(/Content-Length:\s*(\d+)/i);
+
+        if (!contentLengthMatch) return false;
+
+        const contentLength = parseInt(contentLengthMatch[1]);
+        const messageStart = headerEndIndex + 4;
+        const messageEnd = messageStart + contentLength;
+
+        if (this.buffer.length < messageEnd) return false;
+
+        const messageBody = this.buffer.substring(messageStart, messageEnd);
+        this.buffer = this.buffer.substring(messageEnd);
+
+        try {
+            const message = JSON.parse(messageBody);
+            onMessage(message);
+        } catch (e) {
+            logError("Failed to parse DAP message", e, {
+                tool: "dap_transport",
+            });
+        }
+
+        return true;
+    }
+}
+
 async function sendDAPRequest(
     host: string,
     port: number,
@@ -927,22 +1236,13 @@ async function sendDAPRequest(
 ): Promise<any> {
     return new Promise((resolve, reject) => {
         const client = new net.Socket();
-        let buffer = "";
+        const messageHandler = new DAPMessageHandler();
+
         const shouldInitialize = options?.initializeSession !== false;
-        const shouldSendConfigurationDone =
-            shouldInitialize && options?.sendConfigurationDone !== false;
-        const waitForInitializedEvent =
-            options?.waitForInitializedEvent ?? true;
-        const configurationDoneTimeoutMs =
-            options?.configurationDoneTimeoutMs ??
-            DEFAULT_CONFIGURATION_DONE_TIMEOUT_MS;
-        let awaitingInitializeResponse = shouldInitialize;
-        let awaitingInitializedEvent =
-            shouldSendConfigurationDone && waitForInitializedEvent;
-        let configurationDoneSent = !shouldSendConfigurationDone;
-        let commandSent = false;
-        let resolved = false;
-        let configurationDoneTimer: NodeJS.Timeout | null = null;
+        const shouldSendConfigurationDone = shouldInitialize && options?.sendConfigurationDone !== false;
+        const configurationDoneTimeoutMs = options?.configurationDoneTimeoutMs ?? DEFAULT_CONFIGURATION_DONE_TIMEOUT_MS;
+
+        const state = new DAPConnectionState(options!, shouldInitialize, shouldSendConfigurationDone);
 
         const timeoutMs = options?.timeoutMs ?? 10000;
         const initializeArgs = {
@@ -950,436 +1250,150 @@ async function sendDAPRequest(
             ...(options?.initializeArgs || {}),
         };
 
-        const clearConfigurationDoneTimer = () => {
-            if (configurationDoneTimer) {
-                clearTimeout(configurationDoneTimer);
-                configurationDoneTimer = null;
-            }
-        };
-
         const cleanup = () => {
-            clearConfigurationDoneTimer();
+            state.clearConfigurationDoneTimer();
             if (!client.destroyed) {
                 client.destroy();
             }
         };
 
-        const sendDAPMessage = (dapCommand: string, dapArgs?: any) => {
-            const request = {
-                seq: dapSequence++,
-                type: "request",
-                command: dapCommand,
-                arguments: dapArgs || {},
-            };
-
-            const requestStr = JSON.stringify(request);
-            const contentLength = Buffer.byteLength(requestStr, "utf8");
-            const message = `Content-Length: ${contentLength}\r\n\r\n${requestStr}`;
-            client.write(message);
-        };
-
         const sendPrimaryCommand = () => {
-            if (commandSent) {
-                return;
-            }
-            if (awaitingInitializeResponse || !configurationDoneSent) {
-                return;
-            }
-            commandSent = true;
-            sendDAPMessage(command, args);
+            if (!state.isReadyForPrimaryCommand()) return;
+            state.markCommandSent();
+            messageHandler.sendMessage(client, command, args);
         };
 
         const sendConfigurationDone = () => {
-            if (configurationDoneSent) {
-                return;
-            }
-            configurationDoneSent = true;
-            awaitingInitializedEvent = false;
-            clearConfigurationDoneTimer();
-            sendDAPMessage(
-                "configurationDone",
-                options?.configurationDoneArgs || {}
-            );
+            if (!shouldSendConfigurationDone) return;
+            state.markConfigurationDoneSent();
+            messageHandler.sendMessage(client, "configurationDone", options?.configurationDoneArgs || {});
             sendPrimaryCommand();
         };
 
-        const scheduleConfigurationDoneFallback = () => {
-            if (!awaitingInitializedEvent || configurationDoneTimer) {
+        const handleInitializeResponse = (message: any) => {
+            state.markInitializeResponseReceived();
+            if (!message.success) {
+                cleanup();
+                reject(new Error(`DAP initialize failed: ${message.message || "Unknown error"}`));
                 return;
             }
-            configurationDoneTimer = setTimeout(() => {
-                configurationDoneTimer = null;
+
+            if (state.isReadyForPrimaryCommand()) {
+                sendPrimaryCommand();
+            } else if (!state.shouldWaitForInitializedEvent()) {
                 sendConfigurationDone();
-            }, configurationDoneTimeoutMs);
+            } else {
+                state.scheduleConfigurationDoneFallback(sendConfigurationDone, configurationDoneTimeoutMs);
+            }
+        };
+
+        const handleEvent = (message: any) => {
+            if (message.event === "initialized" && state.shouldWaitForInitializedEvent()) {
+                sendConfigurationDone();
+            }
+        };
+
+        const handleResponse = (message: any) => {
+            if (message.command === "initialize") {
+                handleInitializeResponse(message);
+            } else if (message.command === command) {
+                state.markResolved();
+                cleanup();
+                resolve(message);
+            }
+        };
+
+        const onMessage = (message: any) => {
+            if (message.type === "event") {
+                handleEvent(message);
+            } else if (message.type === "response") {
+                handleResponse(message);
+            }
         };
 
         client.connect(port, host, () => {
-            if (awaitingInitializeResponse) {
-                sendDAPMessage("initialize", initializeArgs);
+            if (shouldInitialize) {
+                messageHandler.sendMessage(client, "initialize", initializeArgs);
             } else {
                 sendPrimaryCommand();
             }
         });
 
         client.on("data", (data) => {
-            buffer += data.toString();
-
-            // Parse all messages in buffer
-            while (true) {
-                const headerEndIndex = buffer.indexOf("\r\n\r\n");
-                if (headerEndIndex === -1) break;
-
-                const headerPart = buffer.substring(0, headerEndIndex);
-                const contentLengthMatch = headerPart.match(/Content-Length:\s*(\d+)/i);
-
-                if (!contentLengthMatch) break;
-
-                const contentLength = parseInt(contentLengthMatch[1]);
-                const messageStart = headerEndIndex + 4;
-                const messageEnd = messageStart + contentLength;
-
-                if (buffer.length < messageEnd) break;
-
-                const messageBody = buffer.substring(messageStart, messageEnd);
-                buffer = buffer.substring(messageEnd);
-
-                try {
-                    const message = JSON.parse(messageBody);
-
-                    if (message.type === "event") {
-                        if (
-                            message.event === "initialized" &&
-                            awaitingInitializedEvent
-                        ) {
-                            sendConfigurationDone();
-                        }
-                        continue;
-                    }
-
-                    if (message.type === "response") {
-                        if (awaitingInitializeResponse && message.command === "initialize") {
-                            awaitingInitializeResponse = false;
-                            if (!message.success) {
-                                cleanup();
-                                reject(
-                                    new Error(
-                                        `DAP initialize failed: ${message.message || "Unknown error"}`
-                                    )
-                                );
-                                return;
-                            }
-                            if (configurationDoneSent) {
-                                sendPrimaryCommand();
-                            } else if (!awaitingInitializedEvent) {
-                                sendConfigurationDone();
-                            } else {
-                                scheduleConfigurationDoneFallback();
-                            }
-                            continue;
-                        }
-
-                        if (message.command === "configurationDone") {
-                            continue;
-                        }
-
-                        if (message.command === command) {
-                            resolved = true;
-                            cleanup();
-                            resolve(message);
-                            return;
-                        }
-                    }
-                } catch (e) {
-                    logError("Failed to parse DAP message", e, {
-                        tool: "dap_transport",
-                        command,
-                    });
-                }
-            }
+            messageHandler.processData(data, onMessage);
         });
 
-        client.on("error", (err) => {
+        // Set timeout
+        setTimeout(() => {
+            if (!state.isResolved()) {
+                cleanup();
+                reject(new Error(`DAP request timeout after ${timeoutMs}ms`));
+            }
+        }, timeoutMs);
+
+        client.on("error", (error) => {
             cleanup();
-            reject(err);
-        });
-
-        client.on("close", () => {
-            clearConfigurationDoneTimer();
-            if (!resolved) {
-                reject(new Error("Connection closed without receiving response"));
-            }
-        });
-
-        client.setTimeout(timeoutMs, () => {
-            cleanup();
-            if (awaitingInitializeResponse) {
-                reject(
-                    new Error(
-                        "DAP initialize timeout - debugger tidak merespons. Pastikan sesi VSCode masih berjalan."
-                    )
-                );
-                return;
-            }
-
-            if (awaitingInitializedEvent) {
-                reject(
-                    new Error(
-                        "Debugger tidak pernah mengirim event 'initialized'. Jalankan ulang sesi VSCode lalu coba lagi."
-                    )
-                );
-                return;
-            }
-
-            if (!commandSent) {
-                reject(
-                    new Error(
-                        "Gagal mengirim perintah DAP karena sesi belum siap. Tunggu hingga debugger selesai inisialisasi."
-                    )
-                );
-                return;
-            }
-
-            reject(
-                new Error(
-                    "DAP request timeout - server may not support this command or needs initialization"
-                )
-            );
+            reject(error);
         });
     });
 }
 
-// For Go debugger (Delve), restart is handled by disconnect + relaunch
-// This is more reliable than trying to use the restart command
-async function restartGoDebugger(
-    host: string,
-    port: number
-): Promise<any> {
-    try {
-        // Try disconnect first (this will trigger VSCode to restart automatically if configured)
-        await sendDAPRequest(host, port, "disconnect", {
-            restart: true,
-            terminateDebuggee: false,
-        });
+async function handleDuckDBMetrics(args: any) {
+    const { format = "json" } = args;
 
-        return {
-            success: true,
-            message: "Debugger restart initiated (disconnect with restart=true)",
-        };
-    } catch (disconnectError: any) {
-        // If disconnect fails, try restart command directly
-        try {
-            const response = await sendDAPRequest(host, port, "restart");
+    try {
+        const prometheusMetrics = await collectDuckDBMetrics();
+
+        if (format === "prometheus") {
             return {
-                success: true,
-                message: "Debugger restarted via restart command",
-                response,
+                content: [
+                    {
+                        type: "text",
+                        text: prometheusMetrics,
+                    },
+                ],
             };
-        } catch (restartError: any) {
-            throw new Error(
-                `Failed to restart debugger. Disconnect error: ${disconnectError.message}, Restart error: ${restartError.message}`
-            );
-        }
-    }
-}
-
-async function handleDAPRestart(args: any) {
-    const { host, port, rebuild_first = true, project_path } = args;
-
-    const resolution = await resolveDAPServer(host, port);
-    if (!resolution.success) {
-        return createDAPResolutionErrorResponse(resolution, "dap_restart");
-    }
-
-    const resolvedHost = resolution.host;
-    const resolvedPort = resolution.port;
-
-    let failureStage: "build" | "dap" = "dap";
-
-    try {
-        let buildResult = null;
-
-        // Rebuild first if requested
-        if (rebuild_first) {
-            if (!project_path) {
-                logError(
-                    "dap_restart missing project_path while rebuild_first is true",
-                    undefined,
-                    { tool: "dap_restart" }
-                );
-                return {
-                    content: [
-                        {
-                            type: "text",
-                            text: JSON.stringify(
-                                {
-                                    success: false,
-                                    error: "project_path is required when rebuild_first is true",
-                                },
-                                null,
-                                2
-                            ),
-                        },
-                    ],
-                    isError: true,
-                };
-            }
-
-            logInfo("Building project before DAP restart", {
-                tool: "dap_restart",
-                project_path,
-            });
-            failureStage = "build";
-            const buildCommand = "go build";
-            const { stdout, stderr } = await execAsync(buildCommand, {
-                cwd: project_path,
-            });
-            buildResult = { stdout, stderr };
-            logInfo("Go project build completed", {
-                tool: "dap_restart",
-                project_path,
-            });
-            failureStage = "dap";
         }
 
-        // Send restart request to DAP server using proper method for Go debugger
-        logInfo("Restarting DAP debugger", {
-            tool: "dap_restart",
-            host: resolvedHost,
-            port: resolvedPort,
-            source: resolution.source,
-        });
-        const restartResult = await restartGoDebugger(
-            resolvedHost,
-            resolvedPort
-        );
+        // Parse Prometheus format to JSON
+        const metrics: any = {};
+        const lines = prometheusMetrics.split('\n');
 
-        return {
-            content: [
-                {
-                    type: "text",
-                    text: JSON.stringify(
-                        {
-                            success: true,
-                            message: restartResult.message,
-                            dap_response: restartResult.response,
-                            build_result: buildResult,
-                            dap_server: `${resolvedHost}:${resolvedPort}`,
-                            dap_source: resolution.source,
-                            note: "Debugger will restart automatically. Wait a few seconds for the new session to initialize.",
-                        },
-                        null,
-                        2
-                    ),
-                },
-            ],
-        };
-    } catch (error: any) {
-        logError("dap_restart failed", error, {
-            tool: "dap_restart",
-            host: resolvedHost,
-            port: resolvedPort,
-            stage: failureStage,
-        });
-        const payload: Record<string, unknown> = {
-            success: false,
-            error: error.message,
-            dap_server: `${resolvedHost}:${resolvedPort}`,
-            dap_source: resolution.source,
-            stage: failureStage,
-        };
-
-        if (failureStage === "build") {
-            payload.build_stdout = error.stdout || "";
-            payload.build_stderr = error.stderr || "";
-            if (project_path) {
-                const hints = buildGoProjectHints(
-                    project_path,
-                    error.stderr || error.stdout || error.message
-                );
-                if (hints) {
-                    payload.hints = hints;
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (line.startsWith('# HELP ')) {
+                const [, name, description] = line.split(' ');
+                metrics[name] = { description, value: null };
+            } else if (line.startsWith('# TYPE ')) {
+                // Skip type lines
+                continue;
+            } else if (line && !line.startsWith('#')) {
+                const [name, value, timestamp] = line.split(' ');
+                if (metrics[name]) {
+                    metrics[name].value = parseFloat(value);
+                    metrics[name].timestamp = parseInt(timestamp) * 1000;
                 }
             }
-        } else {
-            payload.troubleshooting = {
-                check_debugger:
-                    "Pastikan VSCode debugger sedang aktif (status bar hijau) dan Debug Console masih menampilkan 'DAP server listening at: HOST:PORT'.",
-                check_port:
-                    "Verifikasi port terbaru di Debug Console. Port bisa berubah setiap kali VSCode restart.",
-                check_initialized:
-                    "Jika Debug Console tidak lagi menampilkan pesan listening, hentikan (Shift+F5) lalu jalankan lagi (F5) sebelum memanggil dap_restart.",
-                check_config:
-                    "Pastikan launch.json memakai konfigurasi Go debugger yang valid dan mode debug (type: \"go\", request: \"launch\").",
-                alternative:
-                    "Bila masih timeout, restart debugger secara manual (Shift+F5 lalu F5) kemudian jalankan ulang perintah ini.",
-            };
         }
 
         return {
             content: [
                 {
                     type: "text",
-                    text: JSON.stringify(payload, null, 2),
-                },
-            ],
-            isError: true,
-        };
-    }
-}
-
-async function handleDAPSendCommand(args: any) {
-    const { host, port, command, arguments: cmdArgs } = args;
-
-    const resolution = await resolveDAPServer(host, port);
-    if (!resolution.success) {
-        return createDAPResolutionErrorResponse(
-            resolution,
-            "dap_send_command"
-        );
-    }
-
-    const resolvedHost = resolution.host;
-    const resolvedPort = resolution.port;
-
-    try {
-        logInfo("Sending DAP command", {
-            tool: "dap_send_command",
-            command,
-            host: resolvedHost,
-            port: resolvedPort,
-            source: resolution.source,
-        });
-        const response = await sendDAPRequest(
-            resolvedHost,
-            resolvedPort,
-            command,
-            cmdArgs
-        );
-
-        return {
-            content: [
-                {
-                    type: "text",
-                    text: JSON.stringify(
-                        {
-                            success: true,
-                            command,
-                            response,
-                            dap_server: `${resolvedHost}:${resolvedPort}`,
-                            dap_source: resolution.source,
-                        },
-                        null,
-                        2
-                    ),
+                    text: JSON.stringify({
+                        success: true,
+                        metrics,
+                        format: "json",
+                        timestamp: new Date().toISOString()
+                    }, null, 2),
                 },
             ],
         };
+
     } catch (error: any) {
-        logError("dap_send_command failed", error, {
-            tool: "dap_send_command",
-            command,
-            host: resolvedHost,
-            port: resolvedPort,
+        logError("duckdb_metrics failed", error, {
+            tool: "duckdb_metrics",
+            format,
         });
         return {
             content: [
@@ -1388,10 +1402,8 @@ async function handleDAPSendCommand(args: any) {
                     text: JSON.stringify(
                         {
                             success: false,
-                            command,
                             error: error.message,
-                            dap_server: `${resolvedHost}:${resolvedPort}`,
-                            dap_source: resolution.source,
+                            format,
                         },
                         null,
                         2
@@ -1457,6 +1469,12 @@ async function main() {
         for (const pool of dbPools.values()) {
             await pool.end();
         }
+        if (duckdbManager) {
+            await duckdbManager.close();
+        }
+        if (duckdbCacheManager) {
+            await duckdbCacheManager.close();
+        }
         await goDebuggerProxy.shutdown();
         process.exit(0);
     });
@@ -1465,6 +1483,12 @@ async function main() {
         logInfo("Received SIGTERM, closing MCP server");
         for (const pool of dbPools.values()) {
             await pool.end();
+        }
+        if (duckdbManager) {
+            await duckdbManager.close();
+        }
+        if (duckdbCacheManager) {
+            await duckdbCacheManager.close();
         }
         await goDebuggerProxy.shutdown();
         process.exit(0);

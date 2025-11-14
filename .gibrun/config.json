@@ -4,8 +4,8 @@
     "basePath": ".gibrun/templates",
     "categories": {
       "api": {
-        "description": "API endpoint templates",
-        "variables": ["endpointName", "method", "path", "framework"],
+        "description": "API endpoint templates (supports TypeScript, Go, Python, Java, Rust)",
+        "variables": ["endpointName", "handlerName", "routeName", "controllerName", "method", "path", "framework"],
         "defaultFramework": "express"
       },
       "database": {

@@ -1,7 +1,7 @@
 // src/tools/project-analyzer/collectors/CodeMetricsCollector.ts
 import { promises as fs } from 'fs';
 import * as path from 'path';
-import { AnalysisScope, SourceFile, DataCollector, CollectedData } from '../types/index.js';
+import { AnalysisScope, SourceFile, DataCollector, CollectedData } from '@analyzer-types/index.js';
 
 export class CodeMetricsCollector implements DataCollector {
   private projectRoot: string;

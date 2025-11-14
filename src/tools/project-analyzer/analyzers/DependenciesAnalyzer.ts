@@ -11,7 +11,7 @@ import {
   LicenseCompatibility,
   DependencyRecommendation,
   BaseAnalyzer
-} from '../types/index.js';
+} from '@analyzer-types/index.js';
 
 export class DependenciesAnalyzer implements BaseAnalyzer {
   async analyze(data: RawProjectData, config: AnalysisConfig): Promise<DependenciesAnalysis> {

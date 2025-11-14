@@ -16,7 +16,13 @@
         ],
         "baseUrl": "./src",
         "paths": {
-            "@/*": ["*"]
+            "@/*": ["*"],
+            "@types/*": ["types/*"],
+            "@project-analyzer/*": ["tools/project-analyzer/*"],
+            "@analyzer-types/*": ["tools/project-analyzer/types/*"],
+            "@core/*": ["core/*"],
+            "@tools/*": ["tools/*"],
+            "@utils/*": ["utils/*"]
         }
     },
     "include": [

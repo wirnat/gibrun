@@ -13,7 +13,7 @@ import {
   QualityRecommendation,
   FileQualityResult,
   BaseAnalyzer
-} from '../types/index.js';
+} from '@analyzer-types/index.js';
 
 export class QualityAnalyzer implements BaseAnalyzer {
   async analyze(data: RawProjectData, config: AnalysisConfig): Promise<QualityAnalysis> {

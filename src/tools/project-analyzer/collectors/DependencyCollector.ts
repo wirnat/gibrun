@@ -1,7 +1,7 @@
 // src/tools/project-analyzer/collectors/DependencyCollector.ts
 import { promises as fs } from 'fs';
 import * as path from 'path';
-import { AnalysisScope, DependencyInfo, DataCollector, CollectedData } from '../types/index.js';
+import { AnalysisScope, DependencyInfo, DataCollector, CollectedData } from '@analyzer-types/index.js';
 
 interface PackageManager {
   name: string;

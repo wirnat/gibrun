@@ -13,7 +13,7 @@ import {
   TrendAnalysis,
   HealthPrediction,
   BaseAnalyzer
-} from '../types/index.js';
+} from '@analyzer-types/index.js';
 
 export class HealthAnalyzer implements BaseAnalyzer {
   async analyze(data: RawProjectData, config: AnalysisConfig): Promise<HealthAssessment> {

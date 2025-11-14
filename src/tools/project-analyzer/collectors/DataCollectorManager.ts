@@ -2,7 +2,7 @@
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import { readdir } from 'fs/promises';
-import { AnalysisScope, RawProjectData, DataCollector } from '../types/index.js';
+import { AnalysisScope, RawProjectData, DataCollector } from '@analyzer-types/index.js';
 
 // Helper function for simple glob matching
 async function matchGlobPattern(pattern: string, baseDir: string): Promise<string[]> {

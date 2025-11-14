@@ -12,6 +12,164 @@ import {
   BaseAnalyzer
 } from '../types/index.js';
 
+// Pattern Detection Helpers
+class PatternDetector {
+  static detectLayeredArchitecture(files: any[]): { detected: boolean; confidence: number; evidence: string } {
+    const presentationFiles = files.filter(f => PatternDetector.isPresentationLayer(f.path)).length;
+    const businessFiles = files.filter(f => PatternDetector.isBusinessLayer(f.path)).length;
+    const dataFiles = files.filter(f => PatternDetector.isDataLayer(f.path)).length;
+
+    const totalFiles = files.length;
+    const layeredRatio = (presentationFiles + businessFiles + dataFiles) / totalFiles;
+
+    return {
+      detected: layeredRatio > 0.6,
+      confidence: Math.min(1.0, layeredRatio),
+      evidence: `${presentationFiles} presentation, ${businessFiles} business, ${dataFiles} data layer files detected`
+    };
+  }
+
+  static detectMicroservicesPattern(files: any[]): { detected: boolean; confidence: number; evidence: string } {
+    const serviceDirs = files.filter(f => f.path?.includes('/services/') || f.path?.includes('/microservices/')).length;
+    const dockerFiles = files.filter(f => f.path?.includes('Dockerfile') || f.path?.includes('docker-compose')).length;
+    const apiFiles = files.filter(f => f.path?.includes('swagger') || f.path?.includes('openapi')).length;
+
+    const indicators = serviceDirs + dockerFiles + apiFiles;
+    const confidence = Math.min(1.0, indicators / 5);
+
+    return {
+      detected: indicators >= 2,
+      confidence,
+      evidence: `${serviceDirs} service directories, ${dockerFiles} Docker files, ${apiFiles} API specs found`
+    };
+  }
+
+  static detectMVCPattern(files: any[]): { detected: boolean; confidence: number; evidence: string } {
+    const controllerFiles = files.filter(f => f.path?.toLowerCase().includes('controller')).length;
+    const modelFiles = files.filter(f => f.path?.toLowerCase().includes('model')).length;
+    const viewFiles = files.filter(f => f.path?.toLowerCase().includes('view') || f.path?.toLowerCase().includes('template')).length;
+
+    const mvcScore = (controllerFiles + modelFiles + viewFiles) / Math.max(files.length, 1);
+
+    return {
+      detected: controllerFiles > 0 && modelFiles > 0 && viewFiles > 0,
+      confidence: Math.min(1.0, mvcScore * 3),
+      evidence: `${controllerFiles} controllers, ${modelFiles} models, ${viewFiles} views detected`
+    };
+  }
+
+  private static isPresentationLayer(path: string): boolean {
+    return path.includes('/ui/') || path.includes('/components/') || path.includes('/views/') ||
+           path.includes('/public/') || path.includes('/templates/');
+  }
+
+  private static isBusinessLayer(path: string): boolean {
+    return path.includes('/services/') || path.includes('/usecases/') || path.includes('/business/') ||
+           path.includes('/logic/') || path.includes('/handlers/');
+  }
+
+  private static isDataLayer(path: string): boolean {
+    return path.includes('/models/') || path.includes('/entities/') || path.includes('/repositories/') ||
+           path.includes('/dao/') || path.includes('/database/');
+  }
+}
+
+// Development Pattern Analyzer
+class DevelopmentPatternAnalyzer {
+  static detectTrunkBasedDevelopment(gitHistory: any[]): { detected: boolean; confidence: number; evidence: string } {
+    if (gitHistory.length === 0) return { detected: false, confidence: 0, evidence: 'No git history available' };
+
+    const recentCommits = gitHistory.slice(0, 50);
+    const avgCommitsPerDay = recentCommits.length / 30;
+
+    const confidence = Math.min(1.0, avgCommitsPerDay / 5);
+
+    return {
+      detected: avgCommitsPerDay >= 2,
+      confidence,
+      evidence: `${avgCommitsPerDay.toFixed(1)} average commits per day`
+    };
+  }
+
+  static detectTDDPattern(data: RawProjectData): { detected: boolean; confidence: number; evidence: string } {
+    const files = data.files || [];
+    const testFiles = files.filter(f => f.path?.includes('.test.') || f.path?.includes('.spec.') ||
+                                       f.path?.includes('/test') || f.path?.includes('/spec')).length;
+    const sourceFiles = files.length;
+
+    const testRatio = testFiles / Math.max(sourceFiles, 1);
+    const confidence = Math.min(1.0, testRatio * 2);
+
+    return {
+      detected: testRatio >= 0.3,
+      confidence,
+      evidence: `${testFiles} test files out of ${sourceFiles} total files (${(testRatio * 100).toFixed(1)}%)`
+    };
+  }
+
+  static detectCleanCodePattern(data: RawProjectData): { detected: boolean; confidence: number; evidence: string } {
+    const files = data.files || [];
+    let score = 0;
+    let evidence: string[] = [];
+
+    const smallFunctions = files.filter(f => {
+      const lines = f.content?.split('\n').length || 0;
+      return lines < 50;
+    }).length;
+    if (smallFunctions > files.length * 0.5) {
+      score += 0.3;
+      evidence.push('Many small functions/methods');
+    }
+
+    const meaningfulNames = files.filter(f =>
+      f.content?.includes('function ') || f.content?.includes('class ')
+    ).length;
+    if (meaningfulNames > files.length * 0.3) {
+      score += 0.3;
+      evidence.push('Good use of functions and classes');
+    }
+
+    const commentedFiles = files.filter(f =>
+      f.content?.includes('//') || f.content?.includes('/*')
+    ).length;
+    if (commentedFiles > files.length * 0.2 && commentedFiles < files.length * 0.8) {
+      score += 0.4;
+      evidence.push('Balanced commenting');
+    }
+
+    return {
+      detected: score >= 0.6,
+      confidence: score,
+      evidence: evidence.join(', ')
+    };
+  }
+
+  static detectCrossFunctionalTeam(gitHistory: any[]): { detected: boolean; confidence: number; evidence: string } {
+    const uniqueAuthors = new Set(gitHistory.map(commit => commit.author));
+    const totalCommits = gitHistory.length;
+
+    if (uniqueAuthors.size < 2) return { detected: false, confidence: 0, evidence: 'Single author detected' };
+
+    const authorCommits: { [key: string]: number } = {};
+    gitHistory.forEach(commit => {
+      authorCommits[commit.author] = (authorCommits[commit.author] || 0) + 1;
+    });
+
+    const avgCommitsPerAuthor = totalCommits / uniqueAuthors.size;
+    const variance = Object.values(authorCommits).reduce((sum, commits) =>
+      sum + Math.pow(commits - avgCommitsPerAuthor, 2), 0
+    ) / uniqueAuthors.size;
+
+    const balanceScore = Math.max(0, 1 - variance / (avgCommitsPerAuthor * avgCommitsPerAuthor));
+
+    return {
+      detected: balanceScore > 0.6,
+      confidence: balanceScore,
+      evidence: `${uniqueAuthors.size} contributors with balanced commit distribution`
+    };
+  }
+}
+
 export class InsightsAnalyzer implements BaseAnalyzer {
   async analyze(data: RawProjectData, config: AnalysisConfig): Promise<IntelligentInsights> {
     const patterns = this.identifyPatterns(data);
@@ -20,7 +178,6 @@ export class InsightsAnalyzer implements BaseAnalyzer {
     const recommendations = this.generatePersonalizedRecommendations(data);
     const knowledge = this.discoverKnowledge(data);
 
-    // Calculate confidence score based on data quality and analysis completeness
     const confidenceScore = this.calculateConfidenceScore(data);
 
     return {
@@ -60,7 +217,7 @@ export class InsightsAnalyzer implements BaseAnalyzer {
     const files = data.files || [];
 
     // Layered Architecture Pattern
-    const hasLayers = this.detectLayeredArchitecture(files);
+    const hasLayers = PatternDetector.detectLayeredArchitecture(files);
     if (hasLayers.detected) {
       patterns.push({
         pattern: 'Layered Architecture',
@@ -72,7 +229,7 @@ export class InsightsAnalyzer implements BaseAnalyzer {
     }
 
     // Microservices Pattern
-    const microservicesPattern = this.detectMicroservicesPattern(files);
+    const microservicesPattern = PatternDetector.detectMicroservicesPattern(files);
     if (microservicesPattern.detected) {
       patterns.push({
         pattern: 'Microservices Architecture',
@@ -84,7 +241,7 @@ export class InsightsAnalyzer implements BaseAnalyzer {
     }
 
     // MVC Pattern
-    const mvcPattern = this.detectMVCPattern(files);
+    const mvcPattern = PatternDetector.detectMVCPattern(files);
     if (mvcPattern.detected) {
       patterns.push({
         pattern: 'MVC Pattern',
@@ -98,72 +255,14 @@ export class InsightsAnalyzer implements BaseAnalyzer {
     return patterns;
   }
 
-  private detectLayeredArchitecture(files: any[]): { detected: boolean; confidence: number; evidence: string } {
-    const presentationFiles = files.filter(f => this.isPresentationLayer(f.path)).length;
-    const businessFiles = files.filter(f => this.isBusinessLayer(f.path)).length;
-    const dataFiles = files.filter(f => this.isDataLayer(f.path)).length;
 
-    const totalFiles = files.length;
-    const layeredRatio = (presentationFiles + businessFiles + dataFiles) / totalFiles;
-
-    return {
-      detected: layeredRatio > 0.6,
-      confidence: Math.min(1.0, layeredRatio),
-      evidence: `${presentationFiles} presentation, ${businessFiles} business, ${dataFiles} data layer files detected`
-    };
-  }
-
-  private detectMicroservicesPattern(files: any[]): { detected: boolean; confidence: number; evidence: string } {
-    // Look for service directories, Docker files, API definitions
-    const serviceDirs = files.filter(f => f.path?.includes('/services/') || f.path?.includes('/microservices/')).length;
-    const dockerFiles = files.filter(f => f.path?.includes('Dockerfile') || f.path?.includes('docker-compose')).length;
-    const apiFiles = files.filter(f => f.path?.includes('swagger') || f.path?.includes('openapi')).length;
-
-    const indicators = serviceDirs + dockerFiles + apiFiles;
-    const confidence = Math.min(1.0, indicators / 5);
-
-    return {
-      detected: indicators >= 2,
-      confidence,
-      evidence: `${serviceDirs} service directories, ${dockerFiles} Docker files, ${apiFiles} API specs found`
-    };
-  }
-
-  private detectMVCPattern(files: any[]): { detected: boolean; confidence: number; evidence: string } {
-    const controllerFiles = files.filter(f => f.path?.toLowerCase().includes('controller')).length;
-    const modelFiles = files.filter(f => f.path?.toLowerCase().includes('model')).length;
-    const viewFiles = files.filter(f => f.path?.toLowerCase().includes('view') || f.path?.toLowerCase().includes('template')).length;
-
-    const mvcScore = (controllerFiles + modelFiles + viewFiles) / Math.max(files.length, 1);
-
-    return {
-      detected: controllerFiles > 0 && modelFiles > 0 && viewFiles > 0,
-      confidence: Math.min(1.0, mvcScore * 3),
-      evidence: `${controllerFiles} controllers, ${modelFiles} models, ${viewFiles} views detected`
-    };
-  }
-
-  private isPresentationLayer(path: string): boolean {
-    return path.includes('/ui/') || path.includes('/components/') || path.includes('/views/') ||
-           path.includes('/public/') || path.includes('/templates/');
-  }
-
-  private isBusinessLayer(path: string): boolean {
-    return path.includes('/services/') || path.includes('/usecases/') || path.includes('/business/') ||
-           path.includes('/logic/') || path.includes('/handlers/');
-  }
-
-  private isDataLayer(path: string): boolean {
-    return path.includes('/models/') || path.includes('/entities/') || path.includes('/repositories/') ||
-           path.includes('/dao/') || path.includes('/database/');
-  }
 
   private analyzeDevelopmentPatterns(data: RawProjectData): IdentifiedPattern[] {
     const patterns: IdentifiedPattern[] = [];
     const gitHistory = data.gitHistory || [];
 
     // Trunk-based Development
-    const trunkBased = this.detectTrunkBasedDevelopment(gitHistory);
+    const trunkBased = DevelopmentPatternAnalyzer.detectTrunkBasedDevelopment(gitHistory);
     if (trunkBased.detected) {
       patterns.push({
         pattern: 'Trunk-based Development',
@@ -175,7 +274,7 @@ export class InsightsAnalyzer implements BaseAnalyzer {
     }
 
     // Test-Driven Development
-    const tdd = this.detectTDDPattern(data);
+    const tdd = DevelopmentPatternAnalyzer.detectTDDPattern(data);
     if (tdd.detected) {
       patterns.push({
         pattern: 'Test-Driven Development',
@@ -189,21 +288,7 @@ export class InsightsAnalyzer implements BaseAnalyzer {
     return patterns;
   }
 
-  private detectTrunkBasedDevelopment(gitHistory: any[]): { detected: boolean; confidence: number; evidence: string } {
-    if (gitHistory.length === 0) return { detected: false, confidence: 0, evidence: 'No git history available' };
 
-    // Look for frequent commits to main branch
-    const recentCommits = gitHistory.slice(0, 50); // Last 50 commits
-    const avgCommitsPerDay = recentCommits.length / 30; // Rough estimate
-
-    const confidence = Math.min(1.0, avgCommitsPerDay / 5); // 5 commits/day as threshold
-
-    return {
-      detected: avgCommitsPerDay >= 2,
-      confidence,
-      evidence: `${avgCommitsPerDay.toFixed(1)} average commits per day`
-    };
-  }
 
   private detectTDDPattern(data: RawProjectData): { detected: boolean; confidence: number; evidence: string } {
     const files = data.files || [];
@@ -225,7 +310,7 @@ export class InsightsAnalyzer implements BaseAnalyzer {
     const patterns: IdentifiedPattern[] = [];
 
     // Clean Code Pattern
-    const cleanCode = this.detectCleanCodePattern(data);
+    const cleanCode = DevelopmentPatternAnalyzer.detectCleanCodePattern(data);
     if (cleanCode.detected) {
       patterns.push({
         pattern: 'Clean Code Practices',
@@ -284,7 +369,7 @@ export class InsightsAnalyzer implements BaseAnalyzer {
     const gitHistory = data.gitHistory || [];
 
     // Cross-functional Team
-    const crossFunctional = this.detectCrossFunctionalTeam(gitHistory);
+    const crossFunctional = DevelopmentPatternAnalyzer.detectCrossFunctionalTeam(gitHistory);
     if (crossFunctional.detected) {
       patterns.push({
         pattern: 'Cross-functional Team',
@@ -502,7 +587,7 @@ export class InsightsAnalyzer implements BaseAnalyzer {
     const files = data.files || [];
 
     // Check for layered architecture
-    const layerCheck = this.detectLayeredArchitecture(files);
+    const layerCheck = PatternDetector.detectLayeredArchitecture(files);
     if (!layerCheck.detected) {
       recommendations.push({
         title: 'Consider Layered Architecture',

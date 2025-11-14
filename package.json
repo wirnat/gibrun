@@ -8,9 +8,9 @@
     "gibrun-mcp-server": "./build/index.js"
   },
   "scripts": {
-    "build": "tsc",
-    "build:dev": "NODE_ENV=development tsc",
-    "build:prod": "NODE_ENV=production tsc",
+    "build": "vite build",
+    "build:dev": "NODE_ENV=development vite build",
+    "build:prod": "NODE_ENV=production vite build",
     "build:check": "tsc --noEmit",
     "dev": "tsc --watch",
     "postbuild": "node scripts/postbuild.mjs",

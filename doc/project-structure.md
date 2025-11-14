@@ -17,13 +17,18 @@ gibRun/
 └── Various config files in root
 ```
 
-## Current Structure (After Migration)
+## Current Structure (After Migration & Modularization)
 
 ```
 gibRun/
-├── 📁 src/               # Source code - organized
+├── 📁 src/               # Source code - organized with path aliases
 │   ├── core/            # Core MCP functionality
-│   │   └── server.ts    # Main server (from index.ts)
+│   │   ├── server.ts    # Main server (from index.ts)
+│   │   ├── duckdb-manager.ts     # DuckDB database operations (Promise-based)
+│   │   ├── duckdb-cache-manager.ts # Cache management
+│   │   ├── service-manager.ts    # Service lifecycle management
+│   │   ├── database-initializer.ts # Database schema setup
+│   │   └── file-operations-manager.ts # File operations (Promise-based)
 │   ├── tools/           # MCP tool implementations
 │   │   ├── dap/         # DAP tools (13 tools)
 │   │   │   ├── index.ts
@@ -32,20 +37,42 @@ gibRun/
 │   │   │   └── inspection-tools.ts  # Variable inspection
 │   │   ├── database/    # Database tools
 │   │   │   └── index.ts
+│   │   ├── duckdb/      # DuckDB-specific tools
+│   │   │   ├── index.ts
+│   │   │   ├── indexing-tools.ts   # Database indexing
+│   │   │   └── cache-tools.ts      # Cache operations
 │   │   ├── http/        # HTTP tools
 │   │   │   └── index.ts
-│   │   └── file-system/ # File system tools
+│   │   └── project-analyzer/ # Project analysis tools (FULLY MODULAR)
+│   │       ├── analyzers/
+│   │       │   ├── ArchitectureAnalyzer.ts     # Main architecture analyzer (MODULAR)
+│   │       │   ├── InsightsAnalyzer.ts         # Development insights
+│   │       │   ├── ModularInsightsAnalyzer.ts  # Modular insights (TYPE-SAFE)
+│   │       │   ├── components/                 # Architecture analyzer components
+│   │       │   │   ├── LayerClassifier.ts      # Layer classification
+│   │       │   │   ├── DependencyGraphBuilder.ts # Dependency analysis
+│   │       │   │   ├── ArchitectureHealthCalculator.ts # Health scoring
+│   │       │   │   ├── PatternDetector.ts      # Pattern detection
+│   │       │   │   ├── RecommendationGenerator.ts # Recommendations
+│   │       │   │   └── index.ts                # Component exports
+│   │       │   └── pattern-detectors/          # Pattern detection modules
+│   │       │       ├── DevelopmentPatternDetector.ts # TDD/Clean Code
+│   │       │       └── QualityPatternDetector.ts     # Code quality
 │   │       └── index.ts
 │   ├── services/        # Business logic services
 │   │   ├── dap-service.ts      # DAP operations
 │   │   ├── database-service.ts # Database operations
 │   │   ├── http-service.ts     # HTTP operations
 │   │   └── logger-service.ts   # Logging service
-│   ├── types/           # TypeScript definitions
+│   ├── types/           # TypeScript definitions (INDEXED)
+│   │   ├── index.ts     # Main types index (with conflict resolution)
 │   │   ├── api.ts       # API type definitions
-│   │   └── common.ts    # Common types
+│   │   ├── cache.ts     # Cache type definitions
+│   │   ├── common.ts    # Common types
+│   │   └── server.ts    # Server types
 │   ├── utils/           # Utility functions
-│   │   └── index.ts
+│   │   ├── index.ts
+│   │   └── duckdb-promisify.ts # DuckDB Promise utilities (NEW)
 │   └── index.ts         # Main entry point
 ├── 📁 test/             # Testing infrastructure (88+ tests)
 │   ├── unit/           # Unit tests (85 cases)

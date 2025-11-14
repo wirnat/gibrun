@@ -20,13 +20,14 @@ import { GoDebuggerProxy } from "@/services/dap-service.js";
 import { logError, logInfo } from "@/services/logger-service.js";
 import { DatabaseService } from "@/services/database-service.js";
 import { HttpService } from "@/services/http-service.js";
-import { DuckDBManager } from "@/core/duckdb-manager.js";
-import { DuckDBCacheManager } from "@/core/duckdb-cache-manager.js";
-import { CacheConfig } from "@/types/cache.js";
-import { FILE_SYSTEM_TOOLS, handleMultiFileReader, handleMultiFileEditor, handleProjectFileManager, handleFileTemplateManager } from "@/tools/file-system/index.js";
-import { ProjectAnalyzerTool } from "@/tools/project-analyzer/index.js";
-import { DUCKDB_TOOLS, handleIndexInitialize, handleIndexUpdate, handleIndexQuery, handleIndexSearchSymbols, handleIndexFindReferences, handleIndexAnalyticsTrends, handleIndexAnalyticsCorrelation, handleIndexValidate, handleIndexCleanup, handleCacheGetOverview, handleCacheInvalidateEntries, handleCacheCleanupMaintenance, handleCacheAnalyzePerformance, handleMemoryStoreValue, handleMemoryRetrieveValue, handleMemoryFindRelated } from "@/tools/duckdb/index.js";
-import { handleDAPRestart, handleDAPSendCommand } from "@/core/dap-handlers.js";
+import { DuckDBManager } from "@core/duckdb-manager.js";
+import { DuckDBCacheManager } from "@core/duckdb-cache-manager.js";
+import { CacheConfig } from "@types/cache.js";
+import { FILE_SYSTEM_TOOLS, handleMultiFileReader, handleMultiFileEditor, handleProjectFileManager, handleFileTemplateManager } from "@tools/file-system/index.js";
+import { ProjectAnalyzerTool } from "@tools/project-analyzer/index.js";
+import { DUCKDB_TOOLS, handleIndexInitialize, handleIndexUpdate, handleIndexQuery, handleIndexSearchSymbols, handleIndexFindReferences, handleIndexAnalyticsTrends, handleIndexAnalyticsCorrelation, handleIndexValidate, handleIndexCleanup, handleCacheGetOverview, handleCacheInvalidateEntries, handleCacheCleanupMaintenance, handleCacheAnalyzePerformance, handleMemoryStoreValue, handleMemoryRetrieveValue, handleMemoryFindRelated } from "@tools/duckdb/index.js";
+import { K6_TOOLS, handleK6LoadTestExecute, handleK6ScriptGenerate } from "@tools/k6/index.js";
+import { handleDAPRestart, handleDAPSendCommand } from "@core/dap-handlers.js";
 
 const execAsync = promisify(exec);
 const goDebuggerProxy = new GoDebuggerProxy(process.cwd());
@@ -178,6 +179,7 @@ const LOCAL_TOOLS: Tool[] = [
     ...FILE_SYSTEM_TOOLS,
     ...projectAnalyzerTool.getTools(),
     ...DUCKDB_TOOLS,
+    ...K6_TOOLS,
     {
         name: "postgres_query",
         description:
@@ -455,6 +457,10 @@ const LOCAL_TOOL_HANDLERS: Record<string, ToolHandler> = {
     memory_retrieve_value: handleMemoryRetrieveValue,
     memory_find_related: handleMemoryFindRelated,
     duckdb_metrics: handleDuckDBMetrics,
+
+    // K6 Load Testing tools
+    "k6_load_test/execute": handleK6LoadTestExecute,
+    "k6_script/generate": handleK6ScriptGenerate,
 };
 
 function mergeToolLists(primary: Tool[], secondary: Tool[]): Tool[] {

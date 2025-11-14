@@ -81,11 +81,98 @@ MCP Server untuk membantu backend programmer dalam proses end-to-end API testing
     - Benchmark comparison and improvement roadmap
     - Trend analysis and health predictions
 
-15. **project_analyzer/insights** - AI-powered insights ✅ **FULLY IMPLEMENTED**
+ 15. **project_analyzer/insights** - AI-powered insights ✅ **FULLY IMPLEMENTED**
     - Pattern recognition (architectural, development, quality)
     - Anomaly detection (large files, high complexity, commit patterns)
     - Predictive recommendations and personalized guidance
     - Knowledge discovery and development practice insights
+
+### DuckDB Tools (High-Performance Analytics Database)
+
+ 16. **index_initialize** - Initialize DuckDB project index 🆕 **NEW**
+    - Create analytical database schema for project indexing
+    - Perform initial full project scan and symbol extraction
+    - Setup performance indexes and full-text search
+
+ 17. **index_update** - Update project index incrementally 🆕 **NEW**
+    - Detect and index changed files only
+    - Maintain symbol relationships and dependencies
+    - Preserve historical metrics and trends
+
+ 18. **index_query** - Query indexed project data 🆕 **NEW**
+    - SQL-based queries on files, symbols, and metrics
+    - Advanced filtering by language, type, complexity
+    - Real-time project analytics
+
+ 19. **index_search_symbols** - Full-text symbol search 🆕 **NEW**
+    - Search functions, classes, variables by name
+    - Find symbol references and definitions
+    - Cross-file symbol relationship analysis
+
+ 20. **index_find_references** - Find symbol references 🆕 **NEW**
+    - Locate all usages of symbols across codebase
+    - Dependency chain analysis
+    - Impact assessment for refactoring
+
+ 21. **index_analytics_trends** - Time-series metrics analysis 🆕 **NEW**
+    - Code complexity trends over time
+    - Development velocity analysis
+    - Quality metrics evolution
+
+ 22. **index_analytics_correlation** - Metrics correlation analysis 🆕 **NEW**
+    - Find relationships between code metrics
+    - Identify quality and performance patterns
+    - Predictive analytics for code health
+
+ 23. **index_validate** - Validate index integrity 🆕 **NEW**
+    - Check database consistency
+    - Verify symbol relationships
+    - Detect indexing anomalies
+
+ 24. **index_cleanup** - Clean up index data 🆕 **NEW**
+    - Remove stale entries and optimize storage
+    - Rebuild performance indexes
+    - Maintain database health
+
+ 25. **cache_get_overview** - Cache system overview 🆕 **NEW**
+    - View all cache types and statistics
+    - Performance metrics and hit rates
+    - Storage utilization analysis
+
+ 26. **cache_invalidate_entries** - Invalidate cache entries 🆕 **NEW**
+    - Selective cache invalidation by pattern
+    - Force refresh of stale data
+    - Cache maintenance operations
+
+ 27. **cache_cleanup_maintenance** - Cache maintenance 🆕 **NEW**
+    - Automatic cleanup of expired entries
+    - Storage optimization and defragmentation
+    - Performance tuning
+
+ 28. **cache_analyze_performance** - Cache performance analysis 🆕 **NEW**
+    - Hit rate analysis and optimization suggestions
+    - Cost savings calculations
+    - Cache efficiency metrics
+
+ 29. **memory_store_value** - Store session memory 🆕 **NEW**
+    - Persistent cross-session memory storage
+    - Context preservation for AI interactions
+    - Memory type categorization
+
+ 30. **memory_retrieve_value** - Retrieve session memory 🆕 **NEW**
+    - Access stored memory by key
+    - Memory type filtering
+    - Salience-based retrieval
+
+ 31. **memory_find_related** - Find related memories 🆕 **NEW**
+    - Semantic memory search
+    - Context-aware memory retrieval
+    - Memory relationship analysis
+
+ 32. **duckdb_metrics** - DuckDB performance metrics 🆕 **NEW**
+    - Database statistics and performance monitoring
+    - Cache hit rates and storage metrics
+    - Prometheus-compatible metrics output
 
 ### Debugger Tools (mirror `external/mcp-go-debugger`)
 

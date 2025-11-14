@@ -12,12 +12,19 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:9090']
 
-  # gibRun MCP Server metrics
-  - job_name: 'gibrun-mcp-server'
-    static_configs:
-      - targets: ['gibrun-mcp:3000']
-    scrape_interval: 5s
-    metrics_path: '/metrics'
+   # gibRun MCP Server metrics
+   - job_name: 'gibrun-mcp-server'
+     static_configs:
+       - targets: ['gibrun-mcp:3000']
+     scrape_interval: 5s
+     metrics_path: '/metrics'
+
+   # DuckDB metrics (if exposed via separate endpoint)
+   - job_name: 'duckdb'
+     static_configs:
+       - targets: ['gibrun-mcp:9123']
+     scrape_interval: 30s
+     metrics_path: '/metrics'
 
   # PostgreSQL metrics
   - job_name: 'postgres'

@@ -100,7 +100,7 @@ services:
 networks:
   test-network:
     driver: bridge
-    internal: true  # Isolate from external networks
+    # internal: true  # Isolate from external networks
 
 volumes:
   postgres_data:

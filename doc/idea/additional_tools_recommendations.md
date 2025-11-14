@@ -37,18 +37,53 @@ Dokumen ini berisi rekomendasi tools tambahan yang diperlukan untuk melengkapi M
 }
 ```
 
-#### Load Testing & Stress Test (Medium Priority)
+#### K6 Load Testing & Stress Test (Medium Priority)
 ```typescript
 {
-  name: 'load_test/execute',
-  description: 'Execute load testing with configurable scenarios',
+  name: 'k6_load_test/execute',
+  description: 'Execute load testing and stress testing using K6 with advanced scenarios',
   inputSchema: {
+    script_type: 'http' | 'websocket' | 'browser' | 'custom',
     target_url: string,
-    concurrent_users: number,
-    duration_seconds: number,
-    ramp_up_time: number,
-    scenarios: object[], // test scenarios
-    thresholds: object    // performance thresholds
+    scenarios: object[], // K6 scenario definitions
+    thresholds: object,   // K6 threshold definitions
+    duration: string,     // test duration (e.g., '30s', '5m')
+    vus: number,         // virtual users
+    stages: object[],    // ramp-up/ramp-down stages
+    environment: object, // environment variables
+    output_format: 'json' | 'html' | 'junit'
+  }
+}
+```
+
+#### K6 Script Generation (Medium Priority)
+```typescript
+{
+  name: 'k6_script/generate',
+  description: 'Generate K6 test scripts from API specifications or recorded sessions',
+  inputSchema: {
+    source_type: 'openapi' | 'postman' | 'har' | 'manual',
+    source_file: string,
+    scenario_template: 'load' | 'stress' | 'spike' | 'volume',
+    custom_checks: object[], // custom validation checks
+    authentication: object,  // auth configuration
+    output_path: string
+  }
+}
+```
+
+#### K6 Cloud Integration (Low Priority)
+```typescript
+{
+  name: 'k6_cloud/deploy',
+  description: 'Deploy and run K6 tests on K6 Cloud infrastructure',
+  inputSchema: {
+    script_path: string,
+    project_id: string,
+    test_name: string,
+    load_zones: string[], // geographical load zones
+    cloud_config: object, // cloud-specific settings
+    notifications: object  // alert configurations
   }
 }
 ```
@@ -338,7 +373,240 @@ Dokumen ini berisi rekomendasi tools tambahan yang diperlukan untuk melengkapi M
 - **Phase 3**: 4 tools (Future)
 - **Inovative Ideas**: 2 tools (R&D)
 
-**Total**: ~14 tools tambahan untuk melengkapi MCP sebagai platform development lengkap.
+**Total**: ~16 tools tambahan untuk melengkapi MCP sebagai platform development lengkap.
+
+## K6 Integration Scenarios
+
+### Scenario 1: API Load Testing
+```javascript
+// Generated K6 script for API testing
+import http from 'k6/http';
+import { check, sleep } from 'k6';
+
+export let options = {
+  stages: [
+    { duration: '2m', target: 100 }, // Ramp up to 100 users
+    { duration: '5m', target: 100 }, // Stay at 100 users
+    { duration: '2m', target: 0 },   // Ramp down to 0 users
+  ],
+  thresholds: {
+    http_req_duration: ['p(99)<1500'], // 99% of requests must complete below 1.5s
+  },
+};
+
+const BASE_URL = __ENV.BASE_URL || 'http://localhost:3000';
+
+export default function () {
+  let response = http.get(`${BASE_URL}/api/users`);
+  check(response, { 'status is 200': (r) => r.status === 200 });
+  sleep(1);
+}
+```
+
+### Scenario 2: Stress Testing dengan Spike
+```javascript
+// Spike testing scenario
+export let options = {
+  stages: [
+    { duration: '10s', target: 10 },   // Normal load
+    { duration: '10s', target: 1000 }, // Spike to 1000 users
+    { duration: '10s', target: 10 },   // Back to normal
+  ],
+};
+
+export default function () {
+  let response = http.post(`${BASE_URL}/api/orders`, JSON.stringify({
+    userId: __VU, // Virtual user ID
+    amount: Math.random() * 100
+  }));
+  check(response, {
+    'status is 201': (r) => r.status === 201,
+    'response time < 2000ms': (r) => r.timings.duration < 2000
+  });
+}
+```
+
+### Scenario 3: WebSocket Real-time Testing
+```javascript
+import ws from 'k6/ws';
+import { check } from 'k6';
+
+export let options = {
+  vus: 50,
+  duration: '30s',
+};
+
+export default function () {
+  const url = 'ws://localhost:3000/ws';
+  const params = { tags: { my_tag: 'websocket_test' } };
+
+  const res = ws.connect(url, params, function (socket) {
+    socket.on('open', () => {
+      socket.send(JSON.stringify({ type: 'subscribe', channel: 'updates' }));
+    });
+
+    socket.on('message', (data) => {
+      check(data, {
+        'received message': (d) => d && d.length > 0,
+      });
+    });
+
+    socket.on('close', () => {
+      // Connection closed
+    });
+  });
+
+  check(res, { 'status is 101': (r) => r && r.status === 101 });
+}
+```
+
+### Scenario 4: Database Connection Pool Testing
+```javascript
+import http from 'k6/http';
+import { check, sleep } from 'k6';
+
+export let options = {
+  stages: [
+    { duration: '1m', target: 10 },
+    { duration: '2m', target: 50 },
+    { duration: '1m', target: 100 },
+    { duration: '2m', target: 100 },
+    { duration: '1m', target: 0 },
+  ],
+  thresholds: {
+    http_req_failed: ['rate<0.1'], // Error rate < 10%
+    http_req_duration: ['p(95)<1000'], // 95% of requests < 1s
+  },
+};
+
+export default function () {
+  // Test database-backed API endpoints
+  let responses = http.batch([
+    ['GET', `${BASE_URL}/api/users`],
+    ['GET', `${BASE_URL}/api/products`],
+    ['POST', `${BASE_URL}/api/search`, JSON.stringify({ query: 'test' })],
+  ]);
+
+  responses.forEach(response => {
+    check(response, {
+      'status is 2xx': (r) => r.status >= 200 && r.status < 300,
+    });
+  });
+
+  sleep(Math.random() * 2 + 1); // Random sleep 1-3 seconds
+}
+```
+
+### Scenario 5: Microservices Integration Testing
+```javascript
+import http from 'k6/http';
+import { check, sleep } from 'k6';
+
+export let options = {
+  scenarios: {
+    user_journey: {
+      executor: 'ramping-vus',
+      stages: [
+        { duration: '1m', target: 10 },
+        { duration: '3m', target: 50 },
+        { duration: '1m', target: 10 },
+      ],
+      tags: { test_type: 'user_journey' },
+    },
+    api_stress: {
+      executor: 'constant-vus',
+      vus: 20,
+      duration: '2m',
+      startTime: '1m',
+      tags: { test_type: 'api_stress' },
+    },
+  },
+  thresholds: {
+    'http_req_duration{test_type:user_journey}': ['p(99)<2000'],
+    'http_req_duration{test_type:api_stress}': ['avg<1000'],
+  },
+};
+
+export default function () {
+  // Simulate user journey across microservices
+  let authResponse = http.post(`${BASE_URL}/auth/login`, {
+    email: `user${__VU}@test.com`,
+    password: 'password123'
+  });
+
+  check(authResponse, {
+    'login successful': (r) => r.status === 200,
+    'has token': (r) => r.json('token') !== undefined,
+  });
+
+  let token = authResponse.json('token');
+
+  // API calls with authentication
+  let headers = { 'Authorization': `Bearer ${token}` };
+
+  let profileResponse = http.get(`${BASE_URL}/api/profile`, { headers });
+  check(profileResponse, { 'profile loaded': (r) => r.status === 200 });
+
+  let ordersResponse = http.get(`${BASE_URL}/api/orders`, { headers });
+  check(ordersResponse, { 'orders loaded': (r) => r.status === 200 });
+
+  sleep(2);
+}
+```
+
+## K6 Integration Benefits
+
+### 1. **Comprehensive Testing Coverage**
+- **HTTP APIs**: REST, GraphQL, WebSocket
+- **Real Browsers**: Using Playwright integration
+- **Custom Protocols**: Extensible for proprietary protocols
+- **Cloud Execution**: Distributed load testing
+
+### 2. **Advanced Metrics & Thresholds**
+```javascript
+thresholds: {
+  // Response time thresholds
+  http_req_duration: ['p(95)<500', 'p(99)<1000'],
+
+  // Error rate thresholds
+  http_req_failed: ['rate<0.05'],
+
+  // Custom metrics
+  'custom_metric{type:api}': ['value>90'],
+
+  // Trend analysis
+  http_req_duration: ['trend<100'], // Duration shouldn't increase by more than 100ms
+}
+```
+
+### 3. **Scenario Types**
+- **Ramping**: Gradual increase in load
+- **Constant**: Steady load for duration
+- **Spike**: Sudden load increase
+- **Custom**: User-defined load patterns
+
+### 4. **Output Formats**
+- **JSON**: For programmatic processing
+- **HTML**: Human-readable reports
+- **JUnit**: CI/CD integration
+- **InfluxDB/Prometheus**: Metrics export
+
+## Implementation Strategy
+
+### Phase 1: Basic K6 Integration
+1. **k6_script/generate**: Generate basic HTTP test scripts
+2. **k6_load_test/execute**: Run local K6 tests
+3. **Result parsing**: Extract metrics and thresholds
+
+### Phase 2: Advanced Scenarios
+1. **WebSocket testing**: Real-time application testing
+2. **Browser testing**: Frontend performance testing
+3. **Custom metrics**: Application-specific measurements
+
+### Phase 3: Cloud & Enterprise Features
+1. **K6 Cloud integration**: Distributed testing
+2. **Result correlation**: With application metrics
+3. **Automated regression**: Performance regression detection
 
 ## Next Steps
 

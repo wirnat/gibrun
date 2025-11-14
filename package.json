@@ -9,6 +9,8 @@
   },
   "scripts": {
     "build": "tsc",
+    "build:dev": "NODE_ENV=development tsc",
+    "build:prod": "NODE_ENV=production tsc",
     "build:check": "tsc --noEmit",
     "dev": "tsc --watch",
     "postbuild": "node scripts/postbuild.mjs",

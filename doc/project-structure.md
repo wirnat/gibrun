@@ -17,7 +17,28 @@ gibRun/
 └── Various config files in root
 ```
 
-## Current Structure (After Migration & Modularization)
+## Build Optimization & Vite Configuration
+
+### Vite Build Optimizations ✅
+
+**Environment-Specific Builds:**
+- **Development**: `npm run build:dev` - with sourcemaps, no minification
+- **Production**: `npm run build:prod` - with esbuild minification, optimized externals
+
+**Key Optimizations:**
+- **Conditional Minification**: esbuild minifier only in production
+- **Smart External Dependencies**: MCP SDK, databases, Node.js built-ins excluded from bundle
+- **Tree Shaking**: Aggressive dead code elimination and side-effect analysis
+- **Path Aliases**: 7 aliases for clean imports (`@`, `@types`, `@core`, etc.)
+- **Development HMR**: Optimized hot reload for faster development
+
+**Performance Benefits:**
+- **Bundle Size**: Minimal bundling due to external dependencies
+- **Build Speed**: Conditional optimizations based on environment
+- **Development Experience**: Fast HMR and detailed sourcemaps
+- **Production Ready**: Minified output with optimal externals
+
+### Current Structure (After Migration & Modularization)
 
 ```
 gibRun/
